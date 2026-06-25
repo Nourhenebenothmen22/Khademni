@@ -10,6 +10,8 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SLOW_QUERY_THRESHOLD_MS: z.coerce.number().min(0).default(300),
   DATABASE_URL: z.string().url(),
+  JWT_ACCESS_SECRET: z.string().min(32).default('super-secret-access-token-key-change-in-production'),
+  JWT_REFRESH_SECRET: z.string().min(32).default('super-secret-refresh-token-key-change-in-production'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
