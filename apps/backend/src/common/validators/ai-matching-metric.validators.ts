@@ -2,9 +2,7 @@ import { z } from 'zod';
 
 import { cuidSchema } from './shared.validators.js';
 
-// ── Prisma Enums ──────────────────────────────────────────────────────────────
-
-const EvaluationMetricType = z.enum([
+export const evaluationMetricTypeEnum = z.enum([
   'ACCURACY',
   'PRECISION',
   'RECALL',
@@ -16,11 +14,9 @@ const EvaluationMetricType = z.enum([
   'MRR',
 ]);
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
-
 export const createMetricSchema = z.object({
   evaluationId: cuidSchema,
-  type: EvaluationMetricType,
+  type: evaluationMetricTypeEnum,
   value: z.number().min(0).max(1),
 });
 
@@ -35,8 +31,6 @@ export const metricParamsSchema = z.object({
   id: cuidSchema,
   evaluationId: cuidSchema,
 });
-
-// ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type CreateMetricInput = z.infer<typeof createMetricSchema>;
 export type BulkCreateMetricsInput = z.infer<typeof bulkCreateMetricsSchema>;
