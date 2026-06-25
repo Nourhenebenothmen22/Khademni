@@ -1,24 +1,19 @@
 import { z } from 'zod';
 
 import {
+  atLeastOneFieldRefine,
   cuidSchema,
   dateSchema,
   paginationSchema,
   sortOrderSchema,
 } from './shared.validators.js';
 
-// ---------------------------------------------------------------------------
-// Prisma enum: JobStatus
-// ---------------------------------------------------------------------------
 export const jobStatusEnum = z.enum(['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED']);
 
-// ---------------------------------------------------------------------------
-// Create
-// ---------------------------------------------------------------------------
 export const createJobPostSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().min(1, 'Description is required').max(10_000),
-  requirements: z.string().min(1, 'Requirements are required').max(10_000),
+  title: z.string().min(3, 'Title must be at least 3 characters').max(180),
+  description: z.string().min(20, 'Description must be at least 20 characters').max(10_000),
+  requirements: z.string().min(10, 'Requirements must be at least 10 characters').max(10_000),
   status: jobStatusEnum.default('DRAFT').optional(),
   deadline: dateSchema
     .refine((date) => date > new Date(), {
@@ -29,14 +24,11 @@ export const createJobPostSchema = z.object({
 
 export type CreateJobPostInput = z.infer<typeof createJobPostSchema>;
 
-// ---------------------------------------------------------------------------
-// Update (partial — at least one field required)
-// ---------------------------------------------------------------------------
 export const updateJobPostSchema = z
   .object({
-    title: z.string().min(1).max(200).optional(),
-    description: z.string().min(1).max(10_000).optional(),
-    requirements: z.string().min(1).max(10_000).optional(),
+    title: z.string().min(3).max(180).optional(),
+    description: z.string().min(20).max(10_000).optional(),
+    requirements: z.string().min(10).max(10_000).optional(),
     status: jobStatusEnum.optional(),
     deadline: dateSchema
       .refine((date) => date > new Date(), {
@@ -44,21 +36,10 @@ export const updateJobPostSchema = z
       })
       .optional(),
   })
-  .superRefine((data, ctx) => {
-    const hasAtLeastOne = Object.values(data).some((v) => v !== undefined);
-    if (!hasAtLeastOne) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'At least one field must be provided for update',
-      });
-    }
-  });
+  .superRefine(atLeastOneFieldRefine);
 
 export type UpdateJobPostInput = z.infer<typeof updateJobPostSchema>;
 
-// ---------------------------------------------------------------------------
-// Query / list
-// ---------------------------------------------------------------------------
 export const jobPostQuerySchema = z.object({
   status: jobStatusEnum.optional(),
   createdById: cuidSchema.optional(),
@@ -73,9 +54,6 @@ export const jobPostQuerySchema = z.object({
 
 export type JobPostQuery = z.infer<typeof jobPostQuerySchema>;
 
-// ---------------------------------------------------------------------------
-// Route params
-// ---------------------------------------------------------------------------
 export const jobPostParamsSchema = z.object({
   id: cuidSchema,
 });
