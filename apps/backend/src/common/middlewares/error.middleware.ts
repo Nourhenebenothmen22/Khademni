@@ -28,10 +28,12 @@ function isJoseError(err: unknown): err is Error {
     err !== null &&
     'code' in err &&
     typeof (err as Record<string, unknown>).code === 'string' &&
-    (err as Record<string, unknown>).code === 'ERR_JWT_EXPIRED' ||
-    (err as Record<string, unknown>).code === 'ERR_JWS_INVALID' ||
-    (err as Record<string, unknown>).code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ||
-    (err as Record<string, unknown>).code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED'
+    (
+      (err as Record<string, unknown>).code === 'ERR_JWT_EXPIRED' ||
+      (err as Record<string, unknown>).code === 'ERR_JWS_INVALID' ||
+      (err as Record<string, unknown>).code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ||
+      (err as Record<string, unknown>).code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED'
+    )
   );
 }
 
@@ -39,15 +41,16 @@ function isMulterError(
   err: unknown,
 ): err is { code: string; field?: string; message: string } {
   return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as Record<string, unknown>).storageErrors !== undefined ||
+    (typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      (err as Record<string, unknown>).storageErrors !== undefined) ||
     (typeof err === 'object' &&
       err !== null &&
       err.constructor?.name === 'MulterError')
   );
 }
+
 
 export const globalErrorHandler = (
   err: unknown,
