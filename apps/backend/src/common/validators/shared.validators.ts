@@ -15,5 +15,34 @@ export const idParamsSchema = z.object({
   id: cuidSchema,
 });
 
+export const strongPasswordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .refine((val) => /[A-Z]/.test(val), {
+    message: 'Password must contain at least one uppercase letter',
+  })
+  .refine((val) => /[a-z]/.test(val), {
+    message: 'Password must contain at least one lowercase letter',
+  })
+  .refine((val) => /\d/.test(val), {
+    message: 'Password must contain at least one digit',
+  })
+  .refine((val) => /[^A-Za-z0-9]/.test(val), {
+    message: 'Password must contain at least one special character',
+  });
+
+export const atLeastOneFieldRefine = <T extends Record<string, unknown>>(
+  data: T,
+  ctx: z.RefinementCtx,
+) => {
+  const hasAtLeastOne = Object.values(data).some((v) => v !== undefined);
+  if (!hasAtLeastOne) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'At least one field must be provided',
+    });
+  }
+};
+
 export type Pagination = z.infer<typeof paginationSchema>;
 export type IdParams = z.infer<typeof idParamsSchema>;
