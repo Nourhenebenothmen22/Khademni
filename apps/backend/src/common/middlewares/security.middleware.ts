@@ -12,6 +12,14 @@ export const applySecurityMiddleware = (app: Express): void => {
 
   app.use(helmet());
 
+  const isProduction = env.NODE_ENV === 'production';
+
+  if (isProduction && env.CORS_ORIGIN === '*') {
+    throw new Error(
+      'CORS_ORIGIN must not be "*" in production when credentials are enabled.',
+    );
+  }
+
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -21,7 +29,18 @@ export const applySecurityMiddleware = (app: Express): void => {
     }),
   );
 
-  app.use(pinoHttp({ logger }));
+  app.use(
+    pinoHttp({
+      logger,
+      redact: {
+        paths: [
+          'req.headers.authorization',
+          'req.headers.cookie',
+        ],
+        censor: '[REDACTED]',
+      },
+    }),
+  );
 
   app.use(compression());
 
