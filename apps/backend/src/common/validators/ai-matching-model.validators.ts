@@ -1,31 +1,25 @@
 import { z } from 'zod';
 
-import { cuidSchema, paginationSchema, sortOrderSchema } from './shared.validators.js';
-
-// ── Schemas ───────────────────────────────────────────────────────────────────
+import {
+  atLeastOneFieldRefine,
+  cuidSchema,
+  paginationSchema,
+  sortOrderSchema,
+} from './shared.validators.js';
+import { jsonObjectSchema } from './json.validator.js';
 
 export const createAIMatchingModelSchema = z.object({
   name: z.string().min(1).max(200),
   version: z.string().min(1).max(50).regex(/^\d+\.\d+\.\d+$/),
   algorithm: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  hyperparameters: z.record(z.string(), z.unknown()),
+  hyperparameters: jsonObjectSchema,
   isActive: z.boolean().default(true),
 });
 
 export const updateAIMatchingModelSchema = createAIMatchingModelSchema
   .partial()
-  .superRefine((data, ctx) => {
-    const hasAtLeastOneField = Object.values(data).some(
-      (value) => value !== undefined,
-    );
-    if (!hasAtLeastOneField) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'At least one field must be provided',
-      });
-    }
-  });
+  .superRefine(atLeastOneFieldRefine);
 
 export const aiMatchingModelParamsSchema = z.object({
   id: cuidSchema,
@@ -38,8 +32,6 @@ export const aiMatchingModelQuerySchema = z.object({
   sortBy: z.enum(['createdAt', 'name', 'version']).default('createdAt').optional(),
   sortOrder: sortOrderSchema.optional(),
 });
-
-// ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type CreateAIMatchingModelInput = z.infer<typeof createAIMatchingModelSchema>;
 export type UpdateAIMatchingModelInput = z.infer<typeof updateAIMatchingModelSchema>;
