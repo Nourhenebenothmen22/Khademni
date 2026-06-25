@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { cuidSchema, dateSchema, paginationSchema, sortOrderSchema } from './shared.validators.js';
+import { jsonObjectSchema } from './json.validator.js';
 
 export const createAuditLogSchema = z.object({
   action: z.string().min(1).max(100),
   entityType: z.string().min(1).max(100),
   entityId: z.string().min(1),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: jsonObjectSchema.optional(),
 });
 
 export const auditLogQuerySchema = z.object({
