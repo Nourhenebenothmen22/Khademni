@@ -6,13 +6,17 @@ import { globalErrorHandler } from './common/middlewares/error.middleware.js';
 
 const app = express();
 
-applySecurityMiddleware(app);
+app.set('trust proxy', 1);
 
-app.use(globalRateLimiter);
+applySecurityMiddleware(app);
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
+
+app.use(globalRateLimiter);
+
+// Future routes will be registered here
 
 app.use(notFoundMiddleware);
 app.use(globalErrorHandler);
