@@ -9,7 +9,104 @@
 * 🟢 You can import this file directly.
 */
 
+export const UserRole = {
+  CANDIDATE: 'CANDIDATE',
+  ADMIN: 'ADMIN'
+} as const
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const JobStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  CLOSED: 'CLOSED',
+  ARCHIVED: 'ARCHIVED'
+} as const
+
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus]
+
+
+export const KeywordType = {
+  REQUIRED: 'REQUIRED',
+  OPTIONAL: 'OPTIONAL',
+  BONUS: 'BONUS'
+} as const
+
+export type KeywordType = (typeof KeywordType)[keyof typeof KeywordType]
+
+
+export const RuleType = {
+  EXPERIENCE: 'EXPERIENCE',
+  DEGREE: 'DEGREE',
+  CERTIFICATION: 'CERTIFICATION',
+  KEYWORD: 'KEYWORD',
+  CUSTOM: 'CUSTOM'
+} as const
+
+export type RuleType = (typeof RuleType)[keyof typeof RuleType]
+
+
+export const ApplicationStatus = {
+  SUBMITTED: 'SUBMITTED',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  SHORTLISTED: 'SHORTLISTED',
+  REJECTED: 'REJECTED',
+  ACCEPTED: 'ACCEPTED',
+  WITHDRAWN: 'WITHDRAWN'
+} as const
+
+export type ApplicationStatus = (typeof ApplicationStatus)[keyof typeof ApplicationStatus]
+
+
+export const DocumentType = {
+  CV: 'CV',
+  MOTIVATION_LETTER: 'MOTIVATION_LETTER'
+} as const
+
+export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType]
+
+
+export const DocumentStatus = {
+  UPLOADED: 'UPLOADED',
+  SCANNED: 'SCANNED',
+  VALIDATED: 'VALIDATED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus]
+
+
+export const RunStatus = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+} as const
+
+export type RunStatus = (typeof RunStatus)[keyof typeof RunStatus]
+
+
+export const ScoreRecommendation = {
+  HIGHLY_RECOMMENDED: 'HIGHLY_RECOMMENDED',
+  RECOMMENDED: 'RECOMMENDED',
+  AVERAGE: 'AVERAGE',
+  NOT_RECOMMENDED: 'NOT_RECOMMENDED'
+} as const
+
+export type ScoreRecommendation = (typeof ScoreRecommendation)[keyof typeof ScoreRecommendation]
+
+
+export const EvaluationMetricType = {
+  ACCURACY: 'ACCURACY',
+  PRECISION: 'PRECISION',
+  RECALL: 'RECALL',
+  F1_SCORE: 'F1_SCORE',
+  PRECISION_AT_1: 'PRECISION_AT_1',
+  PRECISION_AT_5: 'PRECISION_AT_5',
+  NDCG_AT_5: 'NDCG_AT_5',
+  MAP: 'MAP',
+  MRR: 'MRR'
+} as const
+
+export type EvaluationMetricType = (typeof EvaluationMetricType)[keyof typeof EvaluationMetricType]

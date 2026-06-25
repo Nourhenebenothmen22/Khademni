@@ -23,7 +23,72 @@ export * from './enums.js';
  */
 export type User = Prisma.UserModel
 /**
- * Model Post
+ * Model AuthSession
  * 
  */
-export type Post = Prisma.PostModel
+export type AuthSession = Prisma.AuthSessionModel
+/**
+ * Model JobPost
+ * 
+ */
+export type JobPost = Prisma.JobPostModel
+/**
+ * Model JobKeyword
+ * 
+ */
+export type JobKeyword = Prisma.JobKeywordModel
+/**
+ * Model JobMatchingRule
+ * 
+ */
+export type JobMatchingRule = Prisma.JobMatchingRuleModel
+/**
+ * Model Application
+ * 
+ */
+export type Application = Prisma.ApplicationModel
+/**
+ * Model ApplicationDocument
+ * 
+ */
+export type ApplicationDocument = Prisma.ApplicationDocumentModel
+/**
+ * Model CVParseResult
+ * 
+ */
+export type CVParseResult = Prisma.CVParseResultModel
+/**
+ * Model AIMatchingModel
+ * 
+ */
+export type AIMatchingModel = Prisma.AIMatchingModelModel
+/**
+ * Model AIMatchingModelEvaluation
+ * 
+ */
+export type AIMatchingModelEvaluation = Prisma.AIMatchingModelEvaluationModel
+/**
+ * Model AIMatchingMetric
+ * 
+ */
+export type AIMatchingMetric = Prisma.AIMatchingMetricModel
+/**
+ * Model MatchingRun
+ * 
+ */
+export type MatchingRun = Prisma.MatchingRunModel
+/**
+ * Model ApplicationScore
+ * 
+ */
+export type ApplicationScore = Prisma.ApplicationScoreModel
+/**
+ * Model ApplicationStatusHistory
+ * 
+ */
+export type ApplicationStatusHistory = Prisma.ApplicationStatusHistoryModel
+/**
+ * Model AuditLog
+ * 
+ */
+export type AuditLog = Prisma.AuditLogModel
