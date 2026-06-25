@@ -6,9 +6,6 @@ import {
   sortOrderSchema,
 } from './shared.validators.js';
 
-// ---------------------------------------------------------------------------
-// Prisma enum: ApplicationStatus (full set — used for queries)
-// ---------------------------------------------------------------------------
 export const applicationStatusEnum = z.enum([
   'SUBMITTED',
   'UNDER_REVIEW',
@@ -18,9 +15,6 @@ export const applicationStatusEnum = z.enum([
   'WITHDRAWN',
 ]);
 
-// ---------------------------------------------------------------------------
-// Admin-settable statuses only
-// ---------------------------------------------------------------------------
 export const adminSettableStatusEnum = z.enum([
   'UNDER_REVIEW',
   'SHORTLISTED',
@@ -28,9 +22,6 @@ export const adminSettableStatusEnum = z.enum([
   'ACCEPTED',
 ]);
 
-// ---------------------------------------------------------------------------
-// Create (candidate submits)
-// ---------------------------------------------------------------------------
 export const createApplicationSchema = z.object({
   jobPostId: cuidSchema,
   motivationLetter: z.string().max(5_000).optional(),
@@ -38,9 +29,6 @@ export const createApplicationSchema = z.object({
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 
-// ---------------------------------------------------------------------------
-// Update status (admin action — strict, no extra fields)
-// ---------------------------------------------------------------------------
 export const updateApplicationStatusSchema = z
   .object({
     status: adminSettableStatusEnum,
@@ -50,16 +38,10 @@ export const updateApplicationStatusSchema = z
 
 export type UpdateApplicationStatusInput = z.infer<typeof updateApplicationStatusSchema>;
 
-// ---------------------------------------------------------------------------
-// Withdraw (empty body — action derived from endpoint)
-// ---------------------------------------------------------------------------
 export const withdrawApplicationSchema = z.object({});
 
 export type WithdrawApplicationInput = z.infer<typeof withdrawApplicationSchema>;
 
-// ---------------------------------------------------------------------------
-// Query / list
-// ---------------------------------------------------------------------------
 export const applicationQuerySchema = z.object({
   status: applicationStatusEnum.optional(),
   candidateId: cuidSchema.optional(),
@@ -75,9 +57,6 @@ export const applicationQuerySchema = z.object({
 
 export type ApplicationQuery = z.infer<typeof applicationQuerySchema>;
 
-// ---------------------------------------------------------------------------
-// Route params
-// ---------------------------------------------------------------------------
 export const applicationParamsSchema = z.object({
   id: cuidSchema,
 });
