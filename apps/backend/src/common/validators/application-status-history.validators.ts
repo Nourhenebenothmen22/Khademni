@@ -20,6 +20,14 @@ export const createStatusHistorySchema = z
   })
   .superRefine((data, ctx) => {
     if (data.oldStatus) {
+      if (data.oldStatus === data.newStatus) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['newStatus'],
+          message: `Status cannot transition to the same value: ${data.oldStatus}`,
+        });
+        return;
+      }
       const allowedTransitions = VALID_TRANSITIONS[data.oldStatus] as readonly string[];
       if (!allowedTransitions.includes(data.newStatus)) {
         ctx.addIssue({
