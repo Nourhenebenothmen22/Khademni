@@ -2,21 +2,23 @@ import { z } from 'zod';
 
 import { cuidSchema, paginationSchema } from './shared.validators.js';
 
-// ── Prisma Enums ──────────────────────────────────────────────────────────────
+export const documentTypeEnum = z.enum(['CV', 'MOTIVATION_LETTER']);
 
-const DocumentType = z.enum(['CV', 'MOTIVATION_LETTER']);
-const DocumentStatus = z.enum(['UPLOADED', 'SCANNED', 'VALIDATED', 'REJECTED']);
+export const documentStatusEnum = z.enum(['UPLOADED', 'SCANNED', 'VALIDATED', 'REJECTED']);
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
+const allowedMimeTypes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+] as const;
+
+const allowedExtensions = ['.pdf', '.doc', '.docx'] as const;
 
 export const uploadDocumentSchema = z.object({
-  type: DocumentType,
+  type: documentTypeEnum,
   originalName: z.string().min(1).max(255),
-  mimeType: z.enum([
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ]),
-  extension: z.enum(['.pdf', '.docx']),
+  mimeType: z.enum(allowedMimeTypes),
+  extension: z.enum(allowedExtensions),
   sizeBytes: z.number().int().min(1).max(5_242_880),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
 });
@@ -28,12 +30,10 @@ export const documentParamsSchema = z.object({
 
 export const documentQuerySchema = z.object({
   applicationId: cuidSchema.optional(),
-  type: DocumentType.optional(),
-  status: DocumentStatus.optional(),
+  type: documentTypeEnum.optional(),
+  status: documentStatusEnum.optional(),
   ...paginationSchema.shape,
 });
-
-// ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type UploadDocumentInput = z.infer<typeof uploadDocumentSchema>;
 export type DocumentParams = z.infer<typeof documentParamsSchema>;
