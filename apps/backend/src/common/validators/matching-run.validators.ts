@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   atLeastOneFieldRefine,
   cuidSchema,
   paginationSchema,
   sortOrderSchema,
-} from './shared.validators.js';
-import { jsonObjectSchema } from './json.validator.js';
+} from "./shared.validators.js";
+import { jsonObjectSchema } from "./json.validator.js";
 
-const RunStatus = z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED']);
+const RunStatus = z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED"]);
 
 export const createMatchingRunSchema = z.object({
   applicationId: cuidSchema,
@@ -40,7 +40,10 @@ export const matchingRunQuerySchema = z.object({
   modelId: cuidSchema.optional(),
   status: RunStatus.optional(),
   ...paginationSchema.shape,
-  sortBy: z.enum(['startedAt', 'status', 'totalScore']).default('startedAt').optional(),
+  sortBy: z
+    .enum(["startedAt", "status", "totalScore"])
+    .default("startedAt")
+    .optional(),
   sortOrder: sortOrderSchema.optional(),
 });
 

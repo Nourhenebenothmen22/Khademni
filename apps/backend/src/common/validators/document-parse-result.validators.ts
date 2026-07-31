@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { cuidSchema, dateSchema } from './shared.validators.js';
-import { jsonObjectSchema } from './json.validator.js';
+import { cuidSchema, dateSchema } from "./shared.validators.js";
+import { jsonObjectSchema } from "./json.validator.js";
 
 export const createDocumentParseResultSchema = z.object({
   documentId: cuidSchema,
@@ -16,5 +16,9 @@ export const documentParseResultParamsSchema = z.object({
   id: cuidSchema,
 });
 
-export type CreateDocumentParseResultInput = z.infer<typeof createDocumentParseResultSchema>;
-export type DocumentParseResultParams = z.infer<typeof documentParseResultParamsSchema>;
+export type CreateDocumentParseResultInput = z.infer<
+  typeof createDocumentParseResultSchema
+>;
+export type DocumentParseResultParams = z.infer<
+  typeof documentParseResultParamsSchema
+>;

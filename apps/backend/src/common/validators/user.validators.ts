@@ -1,15 +1,18 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   paginationSchema,
   sortOrderSchema,
   strongPasswordSchema,
-} from './shared.validators.js';
+} from "./shared.validators.js";
 
-export const userRoleEnum = z.enum(['CANDIDATE', 'ADMIN']);
+export const userRoleEnum = z.enum(["CANDIDATE", "ADMIN"]);
 
 export const registerUserSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters').max(120),
+  fullName: z
+    .string()
+    .min(2, "Full name must be at least 2 characters")
+    .max(120),
   email: z.string().email(),
   password: strongPasswordSchema,
 });
@@ -31,8 +34,8 @@ export const userQuerySchema = z.object({
   search: z.string().max(100).optional(),
   ...paginationSchema.shape,
   sortBy: z
-    .enum(['createdAt', 'fullName', 'email'])
-    .default('createdAt')
+    .enum(["createdAt", "fullName", "email"])
+    .default("createdAt")
     .optional(),
   sortOrder: sortOrderSchema.optional(),
 });

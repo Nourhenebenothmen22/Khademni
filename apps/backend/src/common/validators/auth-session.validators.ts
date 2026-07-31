@@ -1,6 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { cuidSchema, dateSchema, paginationSchema, sortOrderSchema } from './shared.validators.js';
+import {
+  cuidSchema,
+  dateSchema,
+  paginationSchema,
+  sortOrderSchema,
+} from "./shared.validators.js";
 
 export const createAuthSessionSchema = z.object({
   userId: cuidSchema,
@@ -15,7 +20,7 @@ export const authSessionQuerySchema = z.object({
   userId: cuidSchema.optional(),
   isActive: z.coerce.boolean().optional(),
   ...paginationSchema.shape,
-  sortBy: z.enum(['createdAt', 'expiresAt']).default('createdAt').optional(),
+  sortBy: z.enum(["createdAt", "expiresAt"]).default("createdAt").optional(),
   sortOrder: sortOrderSchema.optional(),
 });
 

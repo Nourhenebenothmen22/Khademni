@@ -1,25 +1,25 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   cuidSchema,
   paginationSchema,
   sortOrderSchema,
-} from './shared.validators.js';
+} from "./shared.validators.js";
 
 export const applicationStatusEnum = z.enum([
-  'SUBMITTED',
-  'UNDER_REVIEW',
-  'SHORTLISTED',
-  'REJECTED',
-  'ACCEPTED',
-  'WITHDRAWN',
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "SHORTLISTED",
+  "REJECTED",
+  "ACCEPTED",
+  "WITHDRAWN",
 ]);
 
 export const adminSettableStatusEnum = z.enum([
-  'UNDER_REVIEW',
-  'SHORTLISTED',
-  'REJECTED',
-  'ACCEPTED',
+  "UNDER_REVIEW",
+  "SHORTLISTED",
+  "REJECTED",
+  "ACCEPTED",
 ]);
 
 export const createApplicationSchema = z.object({
@@ -36,11 +36,15 @@ export const updateApplicationStatusSchema = z
   })
   .strict();
 
-export type UpdateApplicationStatusInput = z.infer<typeof updateApplicationStatusSchema>;
+export type UpdateApplicationStatusInput = z.infer<
+  typeof updateApplicationStatusSchema
+>;
 
 export const withdrawApplicationSchema = z.object({});
 
-export type WithdrawApplicationInput = z.infer<typeof withdrawApplicationSchema>;
+export type WithdrawApplicationInput = z.infer<
+  typeof withdrawApplicationSchema
+>;
 
 export const applicationQuerySchema = z.object({
   status: applicationStatusEnum.optional(),
@@ -49,8 +53,8 @@ export const applicationQuerySchema = z.object({
   search: z.string().max(100).optional(),
   ...paginationSchema.shape,
   sortBy: z
-    .enum(['submittedAt', 'status', 'createdAt'])
-    .default('createdAt')
+    .enum(["submittedAt", "status", "createdAt"])
+    .default("createdAt")
     .optional(),
   sortOrder: sortOrderSchema.optional(),
 });

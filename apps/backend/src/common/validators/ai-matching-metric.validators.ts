@@ -1,17 +1,17 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { cuidSchema } from './shared.validators.js';
+import { cuidSchema } from "./shared.validators.js";
 
 export const evaluationMetricTypeEnum = z.enum([
-  'ACCURACY',
-  'PRECISION',
-  'RECALL',
-  'F1_SCORE',
-  'PRECISION_AT_1',
-  'PRECISION_AT_5',
-  'NDCG_AT_5',
-  'MAP',
-  'MRR',
+  "ACCURACY",
+  "PRECISION",
+  "RECALL",
+  "F1_SCORE",
+  "PRECISION_AT_1",
+  "PRECISION_AT_5",
+  "NDCG_AT_5",
+  "MAP",
+  "MRR",
 ]);
 
 export const createMetricSchema = z.object({

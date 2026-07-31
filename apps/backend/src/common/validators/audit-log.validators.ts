@@ -1,6 +1,11 @@
-import { z } from 'zod';
-import { cuidSchema, dateSchema, paginationSchema, sortOrderSchema } from './shared.validators.js';
-import { jsonObjectSchema } from './json.validator.js';
+import { z } from "zod";
+import {
+  cuidSchema,
+  dateSchema,
+  paginationSchema,
+  sortOrderSchema,
+} from "./shared.validators.js";
+import { jsonObjectSchema } from "./json.validator.js";
 
 export const createAuditLogSchema = z.object({
   action: z.string().min(1).max(100),
@@ -17,7 +22,7 @@ export const auditLogQuerySchema = z.object({
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
   ...paginationSchema.shape,
-  sortBy: z.enum(['createdAt']).default('createdAt').optional(),
+  sortBy: z.enum(["createdAt"]).default("createdAt").optional(),
   sortOrder: sortOrderSchema.optional(),
 });
 

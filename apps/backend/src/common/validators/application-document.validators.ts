@@ -1,18 +1,23 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { cuidSchema, paginationSchema } from './shared.validators.js';
+import { cuidSchema, paginationSchema } from "./shared.validators.js";
 
-export const documentTypeEnum = z.enum(['CV', 'MOTIVATION_LETTER']);
+export const documentTypeEnum = z.enum(["CV", "MOTIVATION_LETTER"]);
 
-export const documentStatusEnum = z.enum(['UPLOADED', 'SCANNED', 'VALIDATED', 'REJECTED']);
+export const documentStatusEnum = z.enum([
+  "UPLOADED",
+  "SCANNED",
+  "VALIDATED",
+  "REJECTED",
+]);
 
 const allowedMimeTypes = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
-const allowedExtensions = ['.pdf', '.doc', '.docx'] as const;
+const allowedExtensions = [".pdf", ".doc", ".docx"] as const;
 
 export const uploadDocumentSchema = z.object({
   type: documentTypeEnum,

@@ -1,11 +1,15 @@
-import { z } from 'zod';
-import { cuidSchema, paginationSchema, sortOrderSchema } from './shared.validators.js';
+import { z } from "zod";
+import {
+  cuidSchema,
+  paginationSchema,
+  sortOrderSchema,
+} from "./shared.validators.js";
 
 export const scoreRecommendationEnum = z.enum([
-  'HIGHLY_RECOMMENDED',
-  'RECOMMENDED',
-  'AVERAGE',
-  'NOT_RECOMMENDED',
+  "HIGHLY_RECOMMENDED",
+  "RECOMMENDED",
+  "AVERAGE",
+  "NOT_RECOMMENDED",
 ]);
 
 export const createApplicationScoreSchema = z.object({
@@ -25,10 +29,17 @@ export const applicationScoreQuerySchema = z.object({
   maxScore: z.coerce.number().min(0).max(100).optional(),
   recommendation: scoreRecommendationEnum.optional(),
   ...paginationSchema.shape,
-  sortBy: z.enum(['calculatedAt', 'finalScore']).default('calculatedAt').optional(),
+  sortBy: z
+    .enum(["calculatedAt", "finalScore"])
+    .default("calculatedAt")
+    .optional(),
   sortOrder: sortOrderSchema.optional(),
 });
 
-export type CreateApplicationScoreInput = z.infer<typeof createApplicationScoreSchema>;
-export type ApplicationScoreParams = z.infer<typeof applicationScoreParamsSchema>;
+export type CreateApplicationScoreInput = z.infer<
+  typeof createApplicationScoreSchema
+>;
+export type ApplicationScoreParams = z.infer<
+  typeof applicationScoreParamsSchema
+>;
 export type ApplicationScoreQuery = z.infer<typeof applicationScoreQuerySchema>;

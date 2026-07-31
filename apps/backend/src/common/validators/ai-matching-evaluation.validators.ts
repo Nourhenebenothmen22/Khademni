@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { cuidSchema, dateSchema } from './shared.validators.js';
-import { jsonObjectSchema } from './json.validator.js';
+import { cuidSchema, dateSchema } from "./shared.validators.js";
+import { jsonObjectSchema } from "./json.validator.js";
 
 export const createEvaluationSchema = z.object({
   modelId: cuidSchema,

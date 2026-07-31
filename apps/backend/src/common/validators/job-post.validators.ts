@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   atLeastOneFieldRefine,
@@ -6,18 +6,29 @@ import {
   dateSchema,
   paginationSchema,
   sortOrderSchema,
-} from './shared.validators.js';
+} from "./shared.validators.js";
 
-export const jobStatusEnum = z.enum(['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED']);
+export const jobStatusEnum = z.enum([
+  "DRAFT",
+  "PUBLISHED",
+  "CLOSED",
+  "ARCHIVED",
+]);
 
 export const createJobPostSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters').max(180),
-  description: z.string().min(20, 'Description must be at least 20 characters').max(10_000),
-  requirements: z.string().min(10, 'Requirements must be at least 10 characters').max(10_000),
-  status: jobStatusEnum.default('DRAFT').optional(),
+  title: z.string().min(3, "Title must be at least 3 characters").max(180),
+  description: z
+    .string()
+    .min(20, "Description must be at least 20 characters")
+    .max(10_000),
+  requirements: z
+    .string()
+    .min(10, "Requirements must be at least 10 characters")
+    .max(10_000),
+  status: jobStatusEnum.default("DRAFT").optional(),
   deadline: dateSchema
     .refine((date) => date > new Date(), {
-      message: 'Deadline must be a future date',
+      message: "Deadline must be a future date",
     })
     .optional(),
 });
@@ -32,7 +43,7 @@ export const updateJobPostSchema = z
     status: jobStatusEnum.optional(),
     deadline: dateSchema
       .refine((date) => date > new Date(), {
-        message: 'Deadline must be a future date',
+        message: "Deadline must be a future date",
       })
       .optional(),
   })
@@ -46,8 +57,8 @@ export const jobPostQuerySchema = z.object({
   search: z.string().max(100).optional(),
   ...paginationSchema.shape,
   sortBy: z
-    .enum(['createdAt', 'title', 'deadline', 'status'])
-    .default('createdAt')
+    .enum(["createdAt", "title", "deadline", "status"])
+    .default("createdAt")
     .optional(),
   sortOrder: sortOrderSchema.optional(),
 });
