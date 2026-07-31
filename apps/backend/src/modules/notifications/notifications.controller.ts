@@ -37,8 +37,9 @@ export async function markAsReadController(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const { id } = req.params as { id: string };
     const result = await notificationsService.markAsRead(
-      req.params.id,
+      id,
       req.user!.userId,
     );
     res.status(200).json({ success: true, data: result });
@@ -66,8 +67,9 @@ export async function deleteNotificationController(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const { id } = req.params as { id: string };
     const result = await notificationsService.deleteNotification(
-      req.params.id,
+      id,
       req.user!.userId,
     );
     res.status(200).json({ success: true, message: result.message });

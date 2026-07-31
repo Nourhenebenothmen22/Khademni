@@ -7,7 +7,11 @@ export async function addRule(jobPostId: string, input: CreateJobMatchingRuleInp
   if (!job) throw new AppError('Job post not found.', 404);
 
   return prisma.jobMatchingRule.create({
-    data: { ...input, jobPostId },
+    data: {
+      ...input,
+      condition: input.condition as any,
+      jobPostId,
+    },
   });
 }
 
@@ -30,7 +34,10 @@ export async function updateRule(
 
   return prisma.jobMatchingRule.update({
     where: { id: ruleId },
-    data: input,
+    data: {
+      ...input,
+      condition: input.condition ? (input.condition as any) : undefined,
+    },
   });
 }
 

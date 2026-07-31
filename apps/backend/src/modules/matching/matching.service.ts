@@ -192,7 +192,7 @@ export async function runMatching(applicationId: string, modelId: string) {
           const reqYears = Number(condition.years || condition.value || 0);
           let detectedYears = 0;
           const expMatch = candidateText.match(/(\d+)\+?\s*(?:years?|yrs?)/);
-          if (expMatch) detectedYears = parseInt(expMatch[1], 10);
+          if (expMatch && expMatch[1]) detectedYears = parseInt(expMatch[1], 10);
 
           matched = detectedYears >= reqYears || candidateText.includes(`${reqYears} years`);
           explanation = matched

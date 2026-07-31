@@ -161,10 +161,12 @@ export async function loginUser(
   const accessToken = await signAccessToken({
     userId: user.id,
     role: user.role,
+    organizationId: user.organizationId ?? undefined,
   });
   const refreshToken = await signRefreshToken({
     userId: user.id,
     role: user.role,
+    organizationId: user.organizationId ?? undefined,
   });
   const refreshTokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -222,7 +224,6 @@ export async function loginMfa(
   const result = verifySync({
     token: input.code,
     secret: user.mfaSecret,
-    window: 2,
   });
 
   if (!result.valid) {
@@ -232,10 +233,12 @@ export async function loginMfa(
   const accessToken = await signAccessToken({
     userId: user.id,
     role: user.role,
+    organizationId: user.organizationId ?? undefined,
   });
   const refreshToken = await signRefreshToken({
     userId: user.id,
     role: user.role,
+    organizationId: user.organizationId ?? undefined,
   });
   const refreshTokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

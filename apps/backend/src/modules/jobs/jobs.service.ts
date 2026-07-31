@@ -29,6 +29,7 @@ export async function createJobPost(
       deadline: input.deadline,
       publishedAt,
       createdById,
+      organizationId: (input as any).organizationId ?? undefined,
     },
     include: {
       keywords: true,

@@ -13,7 +13,12 @@ interface CreateNotificationInput {
 
 export async function createNotification(input: CreateNotificationInput) {
   try {
-    return await prisma.notification.create({ data: input });
+    return await prisma.notification.create({
+      data: {
+        ...input,
+        metadata: input.metadata ? (input.metadata as any) : undefined,
+      },
+    });
   } catch (error) {
     logger.error({ error, userId: input.userId }, 'Failed to create notification');
     return null;

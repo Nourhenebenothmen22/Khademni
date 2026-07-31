@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logger } from "../../lib/logger.js";
-import { runMatching } from "./matching.service.ts";
+import { runMatching } from "./matching.service.js";
 
 export type MatchingJobStatusType = "pending" | "processing" | "completed" | "failed";
 
@@ -72,7 +72,7 @@ export async function enqueueJobMatching(
 
   // Trigger background processing asynchronously without blocking HTTP response
   setImmediate(() => {
-    processMatchingQueueJob(queueJobId, job.applications.map((a) => a.id), activeModelId!).catch(
+    processMatchingQueueJob(queueJobId, job.applications.map((a) => a.id), activeModelId as string).catch(
       (error) => {
         logger.error({ error, queueJobId }, "Background matching worker failed");
       },
@@ -112,7 +112,7 @@ async function processMatchingQueueJob(
     for (let i = 0; i < applicationIds.length; i++) {
       const appId = applicationIds[i];
       try {
-        await runMatching(appId, modelId);
+        await runMatching(appId as string, modelId);
         state.processedCount++;
       } catch (error) {
         state.failedCount++;

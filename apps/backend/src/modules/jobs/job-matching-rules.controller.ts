@@ -8,7 +8,8 @@ export async function addRuleController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const rule = await rulesService.addRule(req.params.jobPostId, req.body);
+    const { jobPostId } = req.params as { jobPostId: string };
+    const rule = await rulesService.addRule(jobPostId, req.body);
     res.status(201).json({ success: true, data: rule });
   } catch (error) {
     next(error);
@@ -21,7 +22,8 @@ export async function getRulesController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const rules = await rulesService.getRules(req.params.jobPostId);
+    const { jobPostId } = req.params as { jobPostId: string };
+    const rules = await rulesService.getRules(jobPostId);
     res.status(200).json({ success: true, data: rules });
   } catch (error) {
     next(error);
@@ -34,9 +36,10 @@ export async function updateRuleController(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const { jobPostId, id } = req.params as { jobPostId: string; id: string };
     const rule = await rulesService.updateRule(
-      req.params.jobPostId,
-      req.params.id,
+      jobPostId,
+      id,
       req.body,
     );
     res.status(200).json({ success: true, data: rule });
@@ -51,9 +54,10 @@ export async function removeRuleController(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const { jobPostId, id } = req.params as { jobPostId: string; id: string };
     const result = await rulesService.removeRule(
-      req.params.jobPostId,
-      req.params.id,
+      jobPostId,
+      id,
     );
     res.status(200).json({ success: true, message: result.message });
   } catch (error) {

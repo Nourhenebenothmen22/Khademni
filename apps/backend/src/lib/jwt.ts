@@ -8,12 +8,14 @@ const REFRESH_SECRET = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 export interface TokenPayload {
   userId: string;
   role: string;
+  organizationId?: string;
 }
 
 export async function signAccessToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
     role: payload.role,
+    organizationId: payload.organizationId,
     jti: nanoid(),
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -27,6 +29,7 @@ export async function verifyAccessToken(token: string): Promise<TokenPayload> {
   return {
     userId: payload.userId as string,
     role: payload.role as string,
+    organizationId: payload.organizationId as string | undefined,
   };
 }
 
@@ -34,6 +37,7 @@ export async function signRefreshToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({
     userId: payload.userId,
     role: payload.role,
+    organizationId: payload.organizationId,
     jti: nanoid(),
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -47,5 +51,6 @@ export async function verifyRefreshToken(token: string): Promise<TokenPayload> {
   return {
     userId: payload.userId as string,
     role: payload.role as string,
+    organizationId: payload.organizationId as string | undefined,
   };
 }

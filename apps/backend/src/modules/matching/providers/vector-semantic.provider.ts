@@ -1,5 +1,5 @@
 import type { ISemanticProvider, SemanticEmbeddingResult } from "../semantic-provider.interface.js";
-import { TfidfSemanticProvider } from "./tfidf-semantic.provider.ts";
+import { TfidfSemanticProvider } from "./tfidf-semantic.provider.js";
 
 /**
  * Neural / Vector Embedding Semantic Provider.

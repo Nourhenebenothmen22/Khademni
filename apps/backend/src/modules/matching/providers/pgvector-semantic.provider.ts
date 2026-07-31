@@ -43,7 +43,7 @@ export class PgVectorSemanticProvider implements ISemanticProvider {
   private computeVectorCosineSimilarity(v1: number[], v2: number[]): number {
     let dotProduct = 0;
     for (let i = 0; i < Math.min(v1.length, v2.length); i++) {
-      dotProduct += v1[i] * v2[i];
+      dotProduct += (v1[i] ?? 0) * (v2[i] ?? 0);
     }
     return Math.max(0, Math.min(1, dotProduct));
   }
