@@ -105,6 +105,7 @@ model User {
   applications               Application[]
   applicationStatusChanges   ApplicationStatusHistory[] @relation("ChangedByUser")
   auditLogs                  AuditLog[]
+  notifications              Notification[]
 
   @@index([role])
   @@map("users")
@@ -122,6 +123,7 @@ model AuthSession {
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, revokedAt])
   @@map("auth_sessions")
 }
 
@@ -158,6 +160,7 @@ model JobKeyword {
 
   @@unique([jobPostId, keyword])
   @@index([jobPostId])
+  @@index([jobPostId, type])
   @@map("job_keywords")
 }
 
@@ -218,6 +221,7 @@ model ApplicationDocument {
   parseResult   DocumentParseResult?
 
   @@unique([applicationId, type])
+  @@index([sha256])
   @@map("application_documents")
 }
 
@@ -303,6 +307,7 @@ model MatchingRun {
   applicationScore ApplicationScore?
 
   @@index([applicationId])
+  @@index([applicationId, startedAt])
   @@index([modelId])
   @@index([status])
   @@map("matching_runs")
@@ -352,7 +357,22 @@ model AuditLog {
   user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@index([entityType])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
