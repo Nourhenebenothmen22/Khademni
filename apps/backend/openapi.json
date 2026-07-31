@@ -1,0 +1,1759 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Intelligent Teacher Recruitment Platform API",
+    "version": "1.0.0",
+    "description": "Backend REST API for Intelligent Teacher Recruitment Platform featuring AI matching, application parsing, and role-based recruitment workflows."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Provide your JWT access token (Bearer <token>) to authenticate requests."
+      }
+    },
+    "schemas": {
+      "adminSettableStatusEnum": {
+        "type": "string",
+        "enum": [
+          "UNDER_REVIEW",
+          "SHORTLISTED",
+          "REJECTED",
+          "ACCEPTED"
+        ]
+      },
+      "aiMatchingModelParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "aiMatchingModelQuerySchema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "name",
+              "version"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "applicationParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "applicationQuerySchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "UNDER_REVIEW",
+              "SHORTLISTED",
+              "REJECTED",
+              "ACCEPTED",
+              "WITHDRAWN"
+            ]
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "jobPostId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "submittedAt",
+              "status",
+              "createdAt"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "applicationScoreParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "applicationScoreQuerySchema": {
+        "type": "object",
+        "properties": {
+          "minScore": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxScore": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": [
+              "HIGHLY_RECOMMENDED",
+              "RECOMMENDED",
+              "AVERAGE",
+              "NOT_RECOMMENDED"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "calculatedAt",
+              "finalScore"
+            ],
+            "default": "calculatedAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "applicationStatusEnum": {
+        "type": "string",
+        "enum": [
+          "SUBMITTED",
+          "UNDER_REVIEW",
+          "SHORTLISTED",
+          "REJECTED",
+          "ACCEPTED",
+          "WITHDRAWN"
+        ]
+      },
+      "auditLogParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "auditLogQuerySchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "authSessionParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "authSessionQuerySchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "expiresAt"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "bulkCreateJobKeywordsSchema": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "keyword": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "REQUIRED",
+                    "OPTIONAL",
+                    "BONUS"
+                  ]
+                },
+                "weight": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 1
+                }
+              },
+              "required": [
+                "keyword",
+                "type"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "keywords"
+        ]
+      },
+      "bulkCreateMetricsSchema": {
+        "type": "object",
+        "properties": {
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "ACCURACY",
+                    "PRECISION",
+                    "RECALL",
+                    "F1_SCORE",
+                    "PRECISION_AT_1",
+                    "PRECISION_AT_5",
+                    "NDCG_AT_5",
+                    "MAP",
+                    "MRR"
+                  ]
+                },
+                "value": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "metrics"
+        ]
+      },
+      "createAIMatchingModelSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
+          "algorithm": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "hyperparameters": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "algorithm",
+          "hyperparameters"
+        ]
+      },
+      "createApplicationSchema": {
+        "type": "object",
+        "properties": {
+          "jobPostId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "motivationLetter": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "jobPostId"
+        ]
+      },
+      "createApplicationScoreSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "matchingRunId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "finalScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": [
+              "HIGHLY_RECOMMENDED",
+              "RECOMMENDED",
+              "AVERAGE",
+              "NOT_RECOMMENDED"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "applicationId",
+          "matchingRunId",
+          "finalScore",
+          "recommendation"
+        ]
+      },
+      "createAuditLogSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "entityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "action",
+          "entityType",
+          "entityId"
+        ]
+      },
+      "createAuthSessionSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "refreshTokenHash": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ipAddress": {
+            "type": "string",
+            "maxLength": 45
+          },
+          "userAgent": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "refreshTokenHash",
+          "expiresAt"
+        ]
+      },
+      "createDocumentParseResultSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "extractedText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500000
+          },
+          "structuredData": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "parserName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "parserVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "parsedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "documentId",
+          "extractedText",
+          "parserName",
+          "parserVersion"
+        ]
+      },
+      "createEvaluationSchema": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "datasetName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "evaluationSampleSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "averageLatencyMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "evaluationDetails": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "modelId",
+          "datasetName",
+          "evaluationSampleSize"
+        ]
+      },
+      "createJobKeywordSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL",
+              "BONUS"
+            ]
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 1
+          }
+        },
+        "required": [
+          "keyword",
+          "type"
+        ]
+      },
+      "createJobMatchingRuleSchema": {
+        "type": "object",
+        "properties": {
+          "ruleName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "EXPERIENCE",
+              "DEGREE",
+              "CERTIFICATION",
+              "KEYWORD",
+              "CUSTOM"
+            ]
+          },
+          "condition": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 1
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "ruleName",
+          "type",
+          "condition"
+        ]
+      },
+      "createJobPostSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 10000
+          },
+          "requirements": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ],
+            "default": "DRAFT"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "requirements"
+        ]
+      },
+      "createMatchingRunSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "applicationId",
+          "modelId"
+        ]
+      },
+      "createMetricSchema": {
+        "type": "object",
+        "properties": {
+          "evaluationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ACCURACY",
+              "PRECISION",
+              "RECALL",
+              "F1_SCORE",
+              "PRECISION_AT_1",
+              "PRECISION_AT_5",
+              "NDCG_AT_5",
+              "MAP",
+              "MRR"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "evaluationId",
+          "type",
+          "value"
+        ]
+      },
+      "createStatusHistorySchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "oldStatus": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "UNDER_REVIEW",
+              "SHORTLISTED",
+              "REJECTED",
+              "ACCEPTED",
+              "WITHDRAWN"
+            ]
+          },
+          "newStatus": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "UNDER_REVIEW",
+              "SHORTLISTED",
+              "REJECTED",
+              "ACCEPTED",
+              "WITHDRAWN"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "applicationId",
+          "newStatus"
+        ]
+      },
+      "cuidSchema": {
+        "type": "string",
+        "format": "cuid"
+      },
+      "dateSchema": {
+        "type": "string",
+        "nullable": true,
+        "format": "date-time"
+      },
+      "documentParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "applicationId"
+        ]
+      },
+      "documentParseResultParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "documentQuerySchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CV",
+              "MOTIVATION_LETTER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPLOADED",
+              "SCANNED",
+              "VALIDATED",
+              "REJECTED"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        }
+      },
+      "documentStatusEnum": {
+        "type": "string",
+        "enum": [
+          "UPLOADED",
+          "SCANNED",
+          "VALIDATED",
+          "REJECTED"
+        ]
+      },
+      "documentTypeEnum": {
+        "type": "string",
+        "enum": [
+          "CV",
+          "MOTIVATION_LETTER"
+        ]
+      },
+      "evaluationMetricTypeEnum": {
+        "type": "string",
+        "enum": [
+          "ACCURACY",
+          "PRECISION",
+          "RECALL",
+          "F1_SCORE",
+          "PRECISION_AT_1",
+          "PRECISION_AT_5",
+          "NDCG_AT_5",
+          "MAP",
+          "MRR"
+        ]
+      },
+      "evaluationParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "modelId"
+        ]
+      },
+      "idParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "jobKeywordParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "jobPostId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "jobPostId"
+        ]
+      },
+      "jobMatchingRuleParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "jobPostId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "jobPostId"
+        ]
+      },
+      "jobPostParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "jobPostQuerySchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ]
+          },
+          "createdById": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "title",
+              "deadline",
+              "status"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "jobStatusEnum": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "PUBLISHED",
+          "CLOSED",
+          "ARCHIVED"
+        ]
+      },
+      "jsonObjectSchema": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "jsonValueSchema": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "nullable": true
+          },
+          {
+            "type": "array",
+            "items": {
+              "nullable": true
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        ]
+      },
+      "keywordTypeEnum": {
+        "type": "string",
+        "enum": [
+          "REQUIRED",
+          "OPTIONAL",
+          "BONUS"
+        ]
+      },
+      "loginSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "matchingRunParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "matchingRunQuerySchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "startedAt",
+              "status",
+              "totalScore"
+            ],
+            "default": "startedAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "metricParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "evaluationId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "evaluationId"
+        ]
+      },
+      "mfaLoginSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6,
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "userId",
+          "code"
+        ]
+      },
+      "mfaVerifySchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6,
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "paginationSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        }
+      },
+      "registerUserSchema": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "fullName",
+          "email",
+          "password"
+        ]
+      },
+      "resetPasswordRequestSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "resetPasswordSchema": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "ruleTypeEnum": {
+        "type": "string",
+        "enum": [
+          "EXPERIENCE",
+          "DEGREE",
+          "CERTIFICATION",
+          "KEYWORD",
+          "CUSTOM"
+        ]
+      },
+      "scoreRecommendationEnum": {
+        "type": "string",
+        "enum": [
+          "HIGHLY_RECOMMENDED",
+          "RECOMMENDED",
+          "AVERAGE",
+          "NOT_RECOMMENDED"
+        ]
+      },
+      "sortOrderSchema": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "default": "desc"
+      },
+      "statusHistoryParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "statusHistoryQuerySchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "changedAt"
+            ],
+            "default": "changedAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "strongPasswordSchema": {
+        "type": "string",
+        "minLength": 8
+      },
+      "updateAIMatchingModelSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
+          "algorithm": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "hyperparameters": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "updateApplicationStatusSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNDER_REVIEW",
+              "SHORTLISTED",
+              "REJECTED",
+              "ACCEPTED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "updateJobMatchingRuleSchema": {
+        "type": "object",
+        "properties": {
+          "ruleName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "EXPERIENCE",
+              "DEGREE",
+              "CERTIFICATION",
+              "KEYWORD",
+              "CUSTOM"
+            ]
+          },
+          "condition": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "updateJobPostSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 10000
+          },
+          "requirements": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ]
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "updateMatchingRunSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "FAILED"
+            ]
+          },
+          "totalScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "matchedKeywords": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "missingKeywords": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "ruleResults": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "scoreBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "semanticResult": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "technicalMetrics": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "errorMessage": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "updateUserSchema": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "additionalProperties": false
+      },
+      "uploadDocumentSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "CV",
+              "MOTIVATION_LETTER"
+            ]
+          },
+          "originalName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "enum": [
+              "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ]
+          },
+          "extension": {
+            "type": "string",
+            "enum": [
+              ".pdf",
+              ".doc",
+              ".docx"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5242880
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "type",
+          "originalName",
+          "mimeType",
+          "extension",
+          "sizeBytes",
+          "sha256"
+        ]
+      },
+      "userQuerySchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "CANDIDATE",
+              "ADMIN"
+            ]
+          },
+          "isActive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "fullName",
+              "email"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "userRoleEnum": {
+        "type": "string",
+        "enum": [
+          "CANDIDATE",
+          "ADMIN"
+        ]
+      },
+      "verifyEmailSchema": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "withdrawApplicationSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {}
+}
