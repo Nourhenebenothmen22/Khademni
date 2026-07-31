@@ -1,5 +1,6 @@
-import { SignJWT, jwtVerify } from 'jose';
-import { env } from '../config/env.js';
+import { SignJWT, jwtVerify } from "jose";
+import { nanoid } from "nanoid";
+import { env } from "../config/env.js";
 
 const ACCESS_SECRET = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 const REFRESH_SECRET = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
@@ -10,10 +11,14 @@ export interface TokenPayload {
 }
 
 export async function signAccessToken(payload: TokenPayload): Promise<string> {
-  return new SignJWT({ userId: payload.userId, role: payload.role })
-    .setProtectedHeader({ alg: 'HS256' })
+  return new SignJWT({
+    userId: payload.userId,
+    role: payload.role,
+    jti: nanoid(),
+  })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime('15m')
+    .setExpirationTime("15m")
     .sign(ACCESS_SECRET);
 }
 
@@ -26,10 +31,14 @@ export async function verifyAccessToken(token: string): Promise<TokenPayload> {
 }
 
 export async function signRefreshToken(payload: TokenPayload): Promise<string> {
-  return new SignJWT({ userId: payload.userId, role: payload.role })
-    .setProtectedHeader({ alg: 'HS256' })
+  return new SignJWT({
+    userId: payload.userId,
+    role: payload.role,
+    jti: nanoid(),
+  })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime("7d")
     .sign(REFRESH_SECRET);
 }
 

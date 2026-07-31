@@ -1,11 +1,11 @@
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
 /**
  * Generates a cryptographically secure random token (64 hex characters, 32 bytes).
  * @returns The random token.
  */
 export function generateRandomToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString("hex");
 }
 
 /**
@@ -14,5 +14,5 @@ export function generateRandomToken(): string {
  * @returns The hex-encoded SHA-256 hash of the token.
  */
 export function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }

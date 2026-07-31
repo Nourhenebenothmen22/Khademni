@@ -1,4 +1,4 @@
-import argon2 from 'argon2';
+import argon2 from "argon2";
 
 /**
  * Hashes a plaintext password using Argon2.
@@ -15,6 +15,9 @@ export async function hashPassword(password: string): Promise<string> {
  * @param hash The Argon2 hash to compare against.
  * @returns A promise that resolves to a boolean indicating match status.
  */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
   return argon2.verify(hash, password);
 }
