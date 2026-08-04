@@ -7,10 +7,10 @@ services:
       - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-recruitment_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recruitment_secure_pass_123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-recruitment_db}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -36,9 +36,9 @@ services:
       PORT: ${PORT:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-recruitment_user}:${POSTGRES_PASSWORD:-recruitment_secure_pass_123}@postgres:5432/${POSTGRES_DB:-recruitment_db}?schema=public}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-prod_access_secret_key_minimum_32_characters_long_987}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-prod_refresh_secret_key_minimum_32_characters_long_987}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     volumes:
       - uploads_data:/app/uploads
     networks:

@@ -67,7 +67,15 @@ export function verifyCsrf(
     return next(new AppError("CSRF protection error: Missing CSRF token.", 403));
   }
 
-  if (cookieToken !== headerToken) {
+  const bufCookie = Buffer.from(cookieToken, "utf-8");
+  const bufHeader = Buffer.from(headerToken, "utf-8");
+
+  if (
+    bufCookie.length === 0 ||
+    bufHeader.length === 0 ||
+    bufCookie.length !== bufHeader.length ||
+    !crypto.timingSafeEqual(bufCookie, bufHeader)
+  ) {
     return next(new AppError("CSRF protection error: Invalid CSRF token match.", 403));
   }
 
