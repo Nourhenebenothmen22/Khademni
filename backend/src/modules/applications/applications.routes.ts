@@ -3,6 +3,7 @@ import {
   authenticate,
   requireRole,
 } from "../../common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import {
   validateBody,
   validateQuery,
@@ -17,7 +18,7 @@ import * as applicationsController from "./applications.controller.js";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireTenantAccess);
 
 router.get("/me", applicationsController.getMyApplicationsController);
 

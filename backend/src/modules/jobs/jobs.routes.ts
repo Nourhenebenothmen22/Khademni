@@ -3,6 +3,7 @@ import {
   authenticate,
   requireRole,
 } from "../../common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import {
   validateBody,
   validateQuery,
@@ -44,6 +45,7 @@ router.post(
   "/",
   authenticate,
   requireRole("ADMIN"),
+  requireTenantAccess,
   validateBody(createJobPostSchema),
   jobsController.createJobController,
 );
@@ -52,6 +54,7 @@ router.put(
   "/:id",
   authenticate,
   requireRole("ADMIN"),
+  requireTenantAccess,
   validateParams(jobPostParamsSchema),
   validateBody(updateJobPostSchema),
   jobsController.updateJobController,
@@ -64,6 +67,7 @@ router.post(
   '/:jobPostId/keywords',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   validateBody(bulkCreateJobKeywordsSchema),
   keywordsController.addKeywordsController,
 );
@@ -72,6 +76,7 @@ router.patch(
   '/:jobPostId/keywords/:id',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   validateBody(createJobKeywordSchema.partial()),
   keywordsController.updateKeywordController,
 );
@@ -80,6 +85,7 @@ router.delete(
   '/:jobPostId/keywords/:id',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   keywordsController.removeKeywordController,
 );
 
@@ -88,6 +94,7 @@ router.get(
   '/:jobPostId/rules',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   rulesController.getRulesController,
 );
 
@@ -95,6 +102,7 @@ router.post(
   '/:jobPostId/rules',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   validateBody(createJobMatchingRuleSchema),
   rulesController.addRuleController,
 );
@@ -103,6 +111,7 @@ router.put(
   '/:jobPostId/rules/:id',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   validateBody(updateJobMatchingRuleSchema),
   rulesController.updateRuleController,
 );
@@ -111,6 +120,7 @@ router.delete(
   '/:jobPostId/rules/:id',
   authenticate,
   requireRole('ADMIN'),
+  requireTenantAccess,
   rulesController.removeRuleController,
 );
 

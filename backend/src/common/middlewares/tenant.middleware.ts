@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "./auth.middleware.js";
 import { AppError } from "../errors/app-error.js";
+import { logAuditAction } from "../../lib/audit.js";
 
 /**
  * Enforces tenant isolation for organization-scoped endpoints.
@@ -18,8 +19,24 @@ export const requireTenantAccess = (
   const requestedOrgId = (req.params.organizationId || req.query.organizationId || req.headers["x-organization-id"]) as string | undefined;
 
   if (requestedOrgId && req.user.organizationId && req.user.organizationId !== requestedOrgId) {
+    logAuditAction({
+      userId: req.user.userId,
+      action: "CROSS_TENANT_ACCESS_ATTEMPT",
+      entityType: "Organization",
+      entityId: requestedOrgId,
+      metadata: {
+        userOrgId: req.user.organizationId,
+        requestedOrgId,
+        path: req.originalUrl,
+        method: req.method,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
     return next(new AppError("Forbidden. Cross-tenant access is strictly prohibited.", 403));
   }
 
   next();
 };
+
