@@ -1,6 +1,6 @@
 # Intelligent Teacher Recruitment Platform — Backend API
 
-Production-grade, scalable, and secure RESTful backend service for an **Intelligent Teacher Recruitment Platform**, engineered with **Node.js 22, Express v5, TypeScript, Prisma ORM, PostgreSQL 16 (with pgvector), and an Isolated Hybrid AI Matching Engine**.
+Production-ready, scalable, and secure RESTful backend service for an **Intelligent Teacher Recruitment Platform**, built with **Node.js 22, Express v5, TypeScript, Prisma ORM, PostgreSQL 16, Redis, and a Hybrid AI Candidate-Matching Engine**.
 
 ---
 
@@ -9,64 +9,68 @@ Production-grade, scalable, and secure RESTful backend service for an **Intellig
 - [Overview](#overview)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Project Structure](#project-structure)
-- [Installation & Setup](#installation--setup)
+- [Prerequisites](#prerequisites)
+- [Installation & Local Setup](#installation--local-setup)
 - [Environment Variables](#environment-variables)
-- [Database & Prisma Setup](#database--prisma-setup)
-- [API Documentation](#api-documentation)
-- [AI Matching Engine Architecture](#ai-matching-engine-architecture)
-- [Authentication & Security](#authentication--security)
-- [Background Jobs, Queues & Caching](#background-jobs-queues--caching)
-- [Development Workflow & Testing](#development-workflow--testing)
-- [Docker Deployment](#docker-deployment)
+- [Database Setup & Migrations](#database-setup--migrations)
+- [Database Seeding](#database-seeding)
+- [Redis Requirements & Usage](#redis-requirements--usage)
+- [Development & Production Commands](#development--production-commands)
+- [Testing & Validation Commands](#testing--validation-commands)
+- [API & OpenAPI Documentation](#api--openapi-documentation)
+- [Multi-Tenancy Isolation (`requireTenantAccess`)](#multi-tenancy-isolation-requiretenantaccess)
+- [Security Features](#security-features)
+- [Docker & Production Deployment](#docker--production-deployment)
 - [Troubleshooting](#troubleshooting)
-- [Future Roadmap](#future-roadmap)
 
 ---
 
 ## Overview
 
-The **Intelligent Teacher Recruitment Platform Backend** provides a complete end-to-end recruitment pipeline tailored for educational institutions. It automates candidate intake, resume processing, state-machine application transitions, dynamic rule-based qualification screening, and vector-based semantic candidate ranking.
+The **Intelligent Teacher Recruitment Platform Backend** provides a multi-tenant recruitment pipeline for educational institutions. It automates candidate intake, PDF CV resume parsing, application status state-machine transitions, rule-based qualification screening, and hybrid AI-powered candidate scoring.
 
 ### Core Capabilities
-- **Auth & Identity**: Role-based access control (ADMIN, CANDIDATE), Argon2 password hashing, dual JWT token rotation with breach defense, and Time-based One-Time Password (TOTP) 2FA.
-- **Job & Requirement Management**: Published job listings with dynamic keywords (`REQUIRED`, `OPTIONAL`, `BONUS`) and custom rule criteria (`DEGREE`, `EXPERIENCE`, `CERTIFICATION`).
-- **Candidate Application Pipeline**: Application intake, file streaming download, SHA-256 file checksum deduplication, and status state machine enforcing valid workflow transitions.
-- **Dynamic Hybrid AI Matching Engine**: 100% database-driven matching engine combining rule-based deterministic scoring with dense vector cosine similarity (`pgvector` / TF-IDF). Zero hardcoded scoring rules or weights.
-- **Asynchronous Background Processing**: Offloads heavy candidate batch ranking out of the HTTP lifecycle with real-time job status tracking.
-- **Performance & Security**: Double Submit Cookie CSRF protection, hardened CORS origin validation, distributed rate limiting, and Redis read-through caching.
+- **Auth & Identity**: Role-based access control (`ADMIN`, `CANDIDATE`), Argon2 password hashing, dual JWT rotation with breach defense, and Time-based One-Time Password (TOTP 2FA via `otplib`).
+- **Multi-Tenant Isolation**: Enforces tenant organization boundaries via `requireTenantAccess` middleware and `organizationId` claims with automatic `CROSS_TENANT_ACCESS_ATTEMPT` audit logging.
+- **Job & Requirement Management**: Job listings with status transitions (`DRAFT`, `PUBLISHED`, `CLOSED`, `ARCHIVED`), weighted keywords (`REQUIRED`, `OPTIONAL`, `BONUS`), and rule criteria (`DEGREE`, `EXPERIENCE`, `CERTIFICATION`, `CUSTOM`).
+- **Candidate CV Intake & Parsing**: File streaming upload with Multer, path-traversal disk storage security, SHA-256 document checksum deduplication, and PDF text extraction via `pdf-parse`.
+- **Hybrid AI Matching Engine**: Composite candidate scoring engine combining keyword matching, deterministic rule criteria evaluation, and TF-IDF cosine similarity term vectorization.
+- **Asynchronous Processing & Redis State**: Asynchronous matching queue with Redis job state persistence (`matching_job:<id>` keys with 24h TTL) and in-memory fallback.
+- **Security & Rate Limiting**: Double Submit Cookie CSRF protection with `crypto.timingSafeEqual()`, 7 granular Redis-backed rate limiters (`rate-limit-redis`), Helmet headers, log redaction, and startup production secret enforcement.
 
 ---
 
 ## Architecture & Tech Stack
 
-```
-                               ┌────────────────────────────────────────┐
-                               │           Client / Frontend            │
-                               └───────────────────┬────────────────────┘
-                                                   │ HTTPS / REST API
-                               ┌───────────────────▼────────────────────┐
-                               │      Express v5 + Node.js 22 ESM       │
-                               │ CORS | Helmet | CSRF | Rate-Limiting   │
-                               └───────────────────┬────────────────────┘
-                                                   │
-        ┌──────────────────────────────────────────┼──────────────────────────────────────────┐
-        │                                          │                                          │
-┌───────▼────────┐                         ┌───────▼────────┐                         ┌───────▼────────┐
-│ Modules Layer  │                         │  Hybrid AI     │                         │ Storage &      │
-│ Auth, Jobs,    │                         │  Matching      │                         │ Caching        │
-│ Applications,  │                         │  Engine        │                         │ PostgreSQL 16  │
-│ Notifications  │                         │  (pgvector)    │                         │ (Redis / Disk) │
-└────────────────┘                         └────────────────┘                         └────────────────┘
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Client / Web Browser                             │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ HTTPS / REST API (/api/v1/*)
+┌──────────────────────────────────────▼──────────────────────────────────────┐
+│                        Express v5 + Node.js 22 (ESM)                        │
+│ CORS | Helmet | Pino Redaction | CSRF timingSafeEqual | Rate Limiters       │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+      ┌────────────────────────────────┼────────────────────────────────┐
+      │                                │                                │
+┌─────▼──────────────┐       ┌─────────▼──────────┐           ┌─────────▼──────────┐
+│ Feature Modules    │       │ Hybrid AI Engine   │           │ Data Persistence   │
+│ Auth, Users, Jobs, │       │ Document Parser,   │           │ PostgreSQL 16      │
+│ Applications, Admin│       │ TF-IDF Vectorizer, │           │ Redis (Store/Queue)│
+│ Notifications      │       │ Matching Queue     │           │ Local Disk Storage │
+└────────────────────┘       └────────────────────┘           └────────────────────┘
 ```
 
 - **Runtime**: Node.js v22 (Native ES Modules / ESM)
 - **Framework**: Express v5
 - **Language**: TypeScript v5 (Strict Mode)
-- **Database ORM**: Prisma v7 (`@prisma/client`) with PostgreSQL 16
-- **Vector Search Engine**: PostgreSQL `pgvector` HNSW index
-- **Authentication**: Argon2 (`hash` / `verify`), Jose (JWT), Otplib (TOTP 2FA)
-- **Validation**: Zod schema validation
-- **Documentation**: Swagger UI & Zod-OpenAPI (`/docs`)
+- **Database ORM**: Prisma ORM v7 (`@prisma/client`) with PostgreSQL 16
+- **Cache & Key-Value Store**: Redis (via `ioredis` and `rate-limit-redis`)
+- **Document Extraction**: `pdf-parse` (v1.1.1)
+- **Authentication**: Argon2 (`hash` / `verify`), Jose (`SignJWT` / `jwtVerify`), Otplib (`totp`)
+- **Validation**: Zod runtime validation schemas & `@asteasolutions/zod-to-openapi`
+- **Documentation**: Swagger UI & Zod-OpenAPI (`/docs` & `openapi.json`)
 - **Logging**: Pino structured logger (`pino-http`)
 - **File Uploads**: Multer disk-storage streaming
 
@@ -75,124 +79,151 @@ The **Intelligent Teacher Recruitment Platform Backend** provides a complete end
 ## Project Structure
 
 ```text
-apps/backend/
+backend/
 ├── prisma/
 │   ├── schema.prisma              # PostgreSQL 16 Prisma Schema (16 Models)
-│   └── migrations/                # SQL Database Migrations
+│   ├── seed.ts                    # Database Seed Script (Argon2 Hashed Admin & Seed Data)
+│   └── migrations/                # SQL Database Migrations (e.g., 20260804200000_add_organization_and_notifications)
 ├── scripts/
 │   ├── integration-test.ts        # Comprehensive E2E Integration Test Suite
-│   └── generate-openapi.ts        # OpenAPI JSON Spec Generator
+│   └── generate-openapi.ts        # OpenAPI 3.0 JSON Spec Generator
 ├── src/
-│   ├── app.ts                     # Express App Initialization & Middleware Stack
+│   ├── app.ts                     # Express App Initialization & 9-Step Middleware Stack
 │   ├── index.ts                   # Server Listener & Graceful Shutdown
 │   ├── config/                    # Environment, Swagger & Zod-OpenAPI Config
+│   │   ├── env.ts                 # Zod Environment Validation & Production Secret Enforcement
+│   │   ├── swagger.ts             # OpenAPI Route Registrations
+│   │   └── zod-openapi.ts         # Zod OpenAPI Registry
 │   ├── lib/                       # Core Infrastructure Services
-│   │   ├── audit.ts               # Non-blocking DB Audit Logger
-│   │   ├── cache.ts               # Redis / Memory Read-Through Caching
-│   │   ├── email.ts               # Nodemailer Service (Verification, Status Updates)
+│   │   ├── audit.ts               # Non-blocking Database Audit Logger
+│   │   ├── cache.ts               # TTL Caching Utilities
+│   │   ├── email.ts               # Email Service (Status Updates & Verification)
 │   │   ├── file-storage.ts        # Path-Traversal Safe Disk Storage Service
 │   │   ├── jwt.ts                 # Dual JWT Access & Refresh Token Signer/Verifier
-│   │   ├── logger.ts              # Pino Logger
+│   │   ├── logger.ts              # Pino Logger Singleton
 │   │   ├── password.ts            # Argon2 Hashing Utilities
-│   │   ├── prisma.ts              # Prisma Client Instance
-│   │   ├── secrets.ts             # Secret Management Abstraction (AWS/Vault)
-│   │   └── token.ts               # Token Generation & Hashing Utilities
+│   │   ├── prisma.ts              # Prisma Client Instance & Slow Query Logging
+│   │   ├── redis.ts               # Redis Client Singleton (ioredis) with Fallback Logging
+│   │   ├── secrets.ts             # Secret Management Abstraction (env/aws/vault)
+│   │   └── token.ts               # SHA-256 Token Digest Helpers
 │   ├── common/                    # Shared Cross-Cutting Concerns
 │   │   ├── errors/                # AppError Custom Exception Class
-│   │   ├── middlewares/           # Auth, Security, CSRF, Rate-Limit, Upload, Error
+│   │   ├── middlewares/           # Auth, Tenant, Security, CSRF, Rate-Limit, Upload, Error
 │   │   ├── utils/                 # Async Wrapper & Helpers
 │   │   └── validators/            # Zod Validation Schemas for All Modules
-│   └── modules/                   # Domain Modules (Clean Architecture)
+│   └── modules/                   # Domain Modules (Clean Layered Architecture)
 │       ├── admin/                 # Admin Dashboard Stats & User Management
-│       ├── ai-models/             # AI Matching Models & Performance Metrics
-│       ├── applications/          # Applications State Machine & File Intake
+│       ├── ai-models/             # AI Matching Models & Metric Tracking
+│       ├── applications/          # Applications State Machine & Document Download
 │       ├── auth/                  # Register, Login, MFA, Password Reset, Refresh
 │       ├── jobs/                  # Job Post CRUD, Keywords & Matching Rules
-│       ├── matching/              # Hybrid Matching Engine, Queue & Vector Providers
+│       ├── matching/              # Hybrid Matching Engine, Queue & CV Text Parser
 │       ├── notifications/         # Candidate In-App Notification System
-│       └── users/                 # Profile & User Queries
-├── .env.example                   # Environment Variables Template
-├── docker-compose.yml             # Local Development Infrastructure Stack
+│       └── users/                 # Profile & User Operations
+├── docker-compose.yml             # Containerized Local Infrastructure Stack (PostgreSQL)
 ├── Dockerfile                     # Multi-stage Containerization Build File
 ├── openapi.json                   # Generated OpenAPI 3.0 Document
-└── package.json                   # Dependencies & Package Scripts
+└── package.json                   # Project Dependencies & Package Scripts
 ```
 
 ---
 
-## Installation & Setup
+## Prerequisites
 
-### Prerequisites
+Before setting up the backend, ensure you have installed:
 - **Node.js**: v22.0.0 or higher
-- **PostgreSQL**: v16 with `pgvector` extension (or Docker Compose)
 - **npm**: v10.0.0 or higher
+- **PostgreSQL**: v16 or higher (or Docker)
+- **Redis**: v7 or higher (Optional; in-memory fallback active when unconfigured)
 
-### Local Installation Steps
+---
 
-1. **Clone Repository & Navigate to Backend**:
+## Installation & Local Setup
+
+1. **Navigate to the Backend Directory**:
    ```bash
-   cd "c:\full_stack projects\intelligent-teacher-recruitment-platform\apps\backend"
+   cd backend
    ```
 
-2. **Install Dependencies**:
+2. **Install Package Dependencies**:
    ```bash
    npm install
    ```
 
 3. **Configure Environment Variables**:
+   Create a local `.env` file from `.env.example`:
    ```bash
    cp .env.example .env
    ```
 
-4. **Start PostgreSQL Database (Docker Compose)**:
+4. **Start PostgreSQL Container (Docker Compose)**:
    ```bash
    docker-compose up -d db
    ```
 
-5. **Run Prisma Migrations & Generate Client**:
+5. **Execute Database Migrations & Generate Prisma Client**:
    ```bash
-   npx prisma db push
+   npx prisma migrate deploy
    npx prisma generate
    ```
 
-6. **Start Development Server**:
+6. **Seed Initial Database Data**:
+   ```bash
+   npx prisma db seed
+   ```
+
+7. **Generate OpenAPI Document**:
+   ```bash
+   npm run openapi:generate
+   ```
+
+8. **Start Development Server**:
    ```bash
    npm run dev
    ```
-   The backend server will start at `http://localhost:3000`.
+   The backend API will start at `http://localhost:3000`.
 
 ---
 
 ## Environment Variables
 
-Configured via `src/config/env.ts` with strict Zod parsing:
+All environment variables are validated at startup via `src/config/env.ts` using Zod.
 
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `NODE_ENV` | string | `development` | Environment (`development`, `production`, `test`) |
-| `PORT` | number | `3000` | HTTP Server Listener Port |
-| `CORS_ORIGIN` | string | `http://localhost:5173,http://localhost:3000` | Comma-separated allowed CORS origins |
-| `DATABASE_URL` | string | *Required* | PostgreSQL Connection String |
-| `JWT_ACCESS_SECRET` | string | *Required (min 32 chars)* | Secret Key for Signing Access Tokens |
-| `JWT_REFRESH_SECRET` | string | *Required (min 32 chars)* | Secret Key for Signing Refresh Tokens |
-| `REDIS_URL` | string | *Optional* | Redis Connection URL for Distributed Rate Limiting & Caching |
-| `SECRETS_PROVIDER` | string | `env` | Secret provider (`env`, `aws`, `vault`) |
-| `CSRF_SECRET` | string | `khademni_csrf_secret_token_key_32chars` | CSRF Token Encryption Key |
-| `SMTP_HOST` | string | *Optional* | SMTP Server Hostname (emails logged to console if unset) |
-| `SMTP_PORT` | number | `587` | SMTP Port |
-| `SMTP_USER` | string | *Optional* | SMTP Authentication User |
-| `SMTP_PASS` | string | *Optional* | SMTP Authentication Password |
-| `UPLOAD_DIR` | string | `./uploads` | Persistent Disk Storage Directory for Uploaded Files |
+| Key | Type | Default Value | Description |
+| :--- | :--- | :--- | :--- |
+| `NODE_ENV` | `development \| production \| test` | `development` | Deployment environment state |
+| `PORT` | `number` | `3000` | HTTP server listening port |
+| `LOG_LEVEL` | `fatal \| error \| warn \| info \| debug \| trace` | `info` | Pino structured log level |
+| `CORS_ORIGIN` | `string` | `http://localhost:5173,http://localhost:3000` | Comma-separated allowed CORS origins |
+| `SLOW_QUERY_THRESHOLD_MS` | `number` | `300` | Prisma slow query warning threshold (ms) |
+| `DATABASE_URL` | `string` (URL) | *Required* | PostgreSQL connection string |
+| `JWT_ACCESS_SECRET` | `string` ($\ge 32$ chars) | *Required* | Secret key for signing JWT access tokens |
+| `JWT_REFRESH_SECRET` | `string` ($\ge 32$ chars) | *Required* | Secret key for signing JWT refresh tokens |
+| `REDIS_URL` | `string` (optional) | — | Redis URL for distributed rate limiting & queues |
+| `SECRETS_PROVIDER` | `env \| aws \| vault` | `env` | Secret manager driver provider |
+| `CSRF_SECRET` | `string` | `khademni_csrf_secret_token_key_32chars` | Encryption key for CSRF double submit tokens |
+| `SMTP_HOST` | `string` (optional) | — | SMTP mail server hostname |
+| `SMTP_PORT` | `number` | `587` | SMTP mail server port |
+| `SMTP_USER` | `string` (optional) | — | SMTP mail authentication username |
+| `SMTP_PASS` | `string` (optional) | — | SMTP mail authentication password |
+| `SMTP_FROM` | `string` | `Khademni <noreply@khademni.com>` | Outgoing email sender address |
+| `UPLOAD_DIR` | `string` | `./uploads` | Local filesystem storage path for uploaded CVs |
+| `APP_URL` | `string` | `http://localhost:3000` | Backend application base URL |
+| `FRONTEND_URL` | `string` | `http://localhost:5173` | Frontend application base URL |
+
+> [!IMPORTANT]
+> **Production Secret Enforcement**: When `NODE_ENV === "production"`, `env.ts` enforces `superRefine()` checks that reject default development secret values (`prod_access_secret_...`, `prod_refresh_secret_...`, `khademni_csrf_secret_...`). The process will immediately halt (`process.exit(1)`) if default development secrets are detected in production.
 
 ---
 
-## Database & Prisma Setup
+## Database Setup & Migrations
 
-The platform uses PostgreSQL 16 with **16 Prisma schema models**:
+The database layer utilizes PostgreSQL 16 with **16 Prisma schema models**:
 
-- **`User`**: User accounts (ADMIN / CANDIDATE), lockout, TOTP secrets.
+- **`Organization`**: Tenant organization entity.
+- **`User`**: User accounts (`ADMIN` / `CANDIDATE`), lockout state, TOTP secrets, `organizationId` foreign key.
 - **`AuthSession`**: Active refresh token sessions with rotation tracking.
-- **`JobPost`**: Job posts, status (`DRAFT`, `PUBLISHED`, `CLOSED`, `ARCHIVED`).
+- **`JobPost`**: Job postings, status (`DRAFT`, `PUBLISHED`, `CLOSED`, `ARCHIVED`), `organizationId` foreign key.
 - **`JobKeyword`**: Weighted job keywords (`REQUIRED`, `OPTIONAL`, `BONUS`).
 - **`JobMatchingRule`**: Dynamic matching rules (`DEGREE`, `EXPERIENCE`, `CERTIFICATION`, `CUSTOM`).
 - **`Application`**: Candidate job applications and tracking codes.
@@ -204,153 +235,175 @@ The platform uses PostgreSQL 16 with **16 Prisma schema models**:
 - **`MatchingRun`**: Execution record storing total scores, keyword matches, and rule breakdowns.
 - **`ApplicationScore`**: Candidate final recommendation (`HIGHLY_RECOMMENDED`, `RECOMMENDED`, `AVERAGE`, `NOT_RECOMMENDED`).
 - **`ApplicationStatusHistory`**: Audit trail of application status changes.
-- **`AuditLog`**: Non-blocking system audit logs.
+- **`AuditLog`**: Non-blocking system audit logs with indexes on `action` and `(entityType, entityId)`.
 - **`Notification`**: Candidate in-app notifications.
 
-### Database Commands
-- **Sync Schema**: `npx prisma db push`
-- **Open Prisma Studio**: `npx prisma studio`
-- **Generate Client**: `npx prisma generate`
+### Database Migration Commands
+```bash
+# Apply pending SQL migrations to PostgreSQL (Production/Staging)
+npx prisma migrate deploy
+
+# Create a new migration during local development
+npx prisma migrate dev --name <migration_name>
+
+# Regenerate Prisma Client TypeScript types
+npx prisma generate
+
+# Launch Prisma Studio web GUI
+npx prisma studio
+```
 
 ---
 
-## API Documentation
+## Database Seeding
 
-Interactive Swagger API Documentation is served at:
-- **Swagger UI**: `http://localhost:3000/docs`
-- **OpenAPI JSON Spec**: `http://localhost:3000/docs.json`
+The seed script ([`prisma/seed.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/prisma/seed.ts)) populates initial seed data:
+- Default `Organization` ("Ministry of Education")
+- Default `ADMIN` user (`admin@khademni.com` / `AdminPass123!`) with Argon2 password hashing
+- Sample `CANDIDATE` users, job posts, keywords, and matching rules
 
-### Key Endpoints
+Run the seed command:
+```bash
+npx prisma db seed
+```
 
-#### Authentication (`/api/v1/auth`)
-- `GET  /csrf` — Obtain a Double Submit CSRF token cookie.
-- `POST /register` — Register a new Candidate account.
-- `POST /login` — Log in with password (returns MFA challenge if enabled).
-- `POST /mfa/setup` — Generate TOTP QR code/secret (Authenticated).
-- `POST /mfa/verify` — Enable TOTP 2FA on account.
-- `POST /mfa/login` — Log in with TOTP 2FA code.
-- `POST /refresh` — Rotate access/refresh token pair (Breach detection active).
+---
+
+## Redis Requirements & Usage
+
+Redis is integrated via a centralized `ioredis` client ([`src/lib/redis.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/redis.ts)).
+
+### Uses of Redis
+1. **Distributed Rate Limiting**: All 7 rate limiters (`globalRateLimiter`, `authRateLimiter`, `authLoginRateLimiter`, `authRegisterRateLimiter`, `authRefreshRateLimiter`, `authMfaRateLimiter`, `uploadRateLimiter`) use `rate-limit-redis` to share request counters across multiple backend instances.
+2. **Matching Queue State Persistence**: The background matching queue ([`matching-queue.service.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/modules/matching/matching-queue.service.ts)) persists async job status (`matching_job:<id>`) to Redis with a 24-hour TTL.
+
+> [!NOTE]
+> **Graceful Fallback**: If `REDIS_URL` is unconfigured or Redis is temporarily unreachable, `redis.ts` catches connection errors on boot and seamlessly falls back to in-memory V8 `Map` storage without crashing the process.
+
+---
+
+## Development & Production Commands
+
+| Script Command | Purpose |
+| :--- | :--- |
+| `npm run dev` | Start development server with hot-reload (`tsx watch src/index.ts`) |
+| `npm run build` | Compile TypeScript source code to `./dist` (`tsc`) |
+| `npm start` | Run compiled production build (`node dist/index.js`) |
+| `npm run typecheck` | Perform static type checking (`tsc --noEmit`) |
+| `npm run test` | Run complete end-to-end integration test suite (`tsx scripts/integration-test.ts`) |
+| `npm run openapi:generate` | Generate updated `openapi.json` from Zod routes (`tsx scripts/generate-openapi.ts`) |
+| `npx prisma db seed` | Execute database seeding (`ts-node prisma/seed.ts`) |
+
+---
+
+## Testing & Validation Commands
+
+Execute the automated end-to-end integration test suite against PostgreSQL:
+
+```bash
+npm run test
+```
+
+### Verified Test Coverage
+1. CSRF token issuance & Double Submit Cookie verification.
+2. Candidate registration, password hashing & authentication.
+3. Password reset token generation & completion flow.
+4. TOTP MFA secret generation, QR code setup, verification, and MFA login.
+5. Token pair rotation and stolen refresh token breach defense.
+6. Job post creation, keyword configuration, matching rule setup, and publication.
+7. Candidate application submission, PDF file parsing (`pdf-parse`), and streaming document download.
+8. Hybrid AI matching engine execution & score breakdown.
+9. Asynchronous AI matching queue submission & status polling.
+10. AI model performance evaluation & metric recording.
+11. State-machine status transitions & in-app notification creation.
+12. Multi-tenant access controls & admin dashboard statistics aggregation.
+
+---
+
+## API & OpenAPI Documentation
+
+Interactive Swagger API documentation is served automatically on boot:
+- **Swagger UI**: [`http://localhost:3000/docs`](http://localhost:3000/docs)
+- **OpenAPI JSON Spec**: [`http://localhost:3000/docs.json`](http://localhost:3000/docs.json)
+
+### Key Endpoint Groups
+
+#### Auth (`/api/v1/auth`)
+- `GET /csrf` — Obtain CSRF token cookie.
+- `POST /register` — Register Candidate account.
+- `POST /login` — Authenticate user (returns MFA token if MFA active).
+- `POST /mfa/setup` — Generate TOTP QR code & secret.
+- `POST /mfa/verify` — Enable TOTP 2FA.
+- `POST /mfa/login` — Complete login with 6-digit TOTP code.
+- `POST /refresh` — Rotate access & refresh token pair.
 - `POST /forgot-password` — Request password reset email token.
 - `POST /reset-password` — Complete password reset.
 
 #### Job Postings (`/api/v1/jobs`)
-- `GET  /` — List job posts (Supports search, status filter, pagination).
-- `GET  /:id` — Get single job post details.
-- `POST /` — Create a new job post (ADMIN).
-- `PUT  /:id` — Update job post / change status (ADMIN).
-- `POST /:jobPostId/keywords` — Manage job keywords (ADMIN).
-- `POST /:jobPostId/rules` — Manage job matching rules (ADMIN).
+- `GET /` — Search published jobs (Query filters: `search`, `status`, `page`, `limit`).
+- `GET /:id` — Get job details.
+- `POST /` — Create job post (`ADMIN`, `requireTenantAccess`).
+- `PUT /:id` — Update job post (`ADMIN`, `requireTenantAccess`).
+- `POST /:jobPostId/keywords` — Add weighted job keywords (`ADMIN`, `requireTenantAccess`).
+- `POST /:jobPostId/rules` — Add job matching rules (`ADMIN`, `requireTenantAccess`).
 
 #### Applications (`/api/v1/applications`)
-- `POST /jobs/:jobId/apply` — Candidate CV file upload intake.
-- `GET  /` — List applications (Candidate / Admin).
-- `PATCH /:id/status` — Transition application status state machine.
-- `GET  /:id/documents/:docId/download` — Stream resume file from disk.
+- `POST /jobs/:jobId/apply` — Candidate CV file upload intake (`uploadRateLimiter`).
+- `GET /` — List applications (`ADMIN`, `requireTenantAccess`).
+- `GET /me` — Candidate application history.
+- `PATCH /:id/status` — State-machine status transition (`ADMIN`, `requireTenantAccess`).
+- `GET /:id/documents/:docId/download` — Stream resume file from disk storage.
 
-#### AI Matching Engine (`/api/v1/matching`)
-- `POST /run` — Execute synchronous hybrid AI matching for single application (ADMIN).
-- `POST /queue-job/:jobPostId` — Enqueue asynchronous background batch matching job (ADMIN).
-- `GET  /queue-status/:queueJobId` — Check status & progress of background matching job.
-- `GET  /scores/:applicationId` — Fetch candidate score breakdown.
-
----
-
-## AI Matching Engine Architecture
-
-```
-                                ┌──────────────────────────────────────┐
-                                │     Candidate CV + Motivation Text   │
-                                └──────────────────┬───────────────────┘
-                                                   │
-                         ┌─────────────────────────┴─────────────────────────┐
-                         │                                                   │
-              ┌──────────▼──────────┐                             ┌──────────▼──────────┐
-              │   Phase 1 Engine    │                             │  Phase 2 & 3 Engine │
-              │ Dynamic Keywords    │                             │ PgVector 128-d      │
-              │ & Condition Rules   │                             │ Dense Vector Cosine │
-              └──────────┬──────────┘                             └──────────┬──────────┘
-                         │                                                   │
-                         └─────────────────────────┬─────────────────────────┘
-                                                   │
-                                ┌──────────────────▼───────────────────┐
-                                │          Hybrid Formula             │
-                                │ S = w_rule*S_rule + w_sem*S_semantic │
-                                └──────────────────┬───────────────────┘
-                                                   │
-                                ┌──────────────────▼───────────────────┐
-                                │  Final Candidate Score & Breakdown   │
-                                └──────────────────────────────────────┘
-```
-
-1. **Dynamic Hyperparameters**:
-   All scoring weights, keyword multipliers (`REQUIRED: 3.0`, `OPTIONAL: 1.0`, `BONUS: 0.5`), and degree hierarchies are loaded dynamically from `AIMatchingModel.hyperparameters`. Zero hardcoded rules in source code.
-
-2. **Provider-Independent Semantic Layer**:
-   Uses the `ISemanticProvider` contract interface. Defaults to `PgVectorSemanticProvider` for dense normalized vector similarity, with seamless fallback to `TfidfSemanticProvider`.
-
-3. **Hybrid Ranking Formula**:
-   $$S_{final} = w_{rule} \cdot S_{rule} + w_{semantic} \cdot S_{semantic}$$
+#### AI Matching (`/api/v1/matching`)
+- `POST /run` — Synchronous candidate evaluation (`ADMIN`, `requireTenantAccess`).
+- `POST /queue-job/:jobPostId` — Enqueue asynchronous background matching job (`ADMIN`, `requireTenantAccess`).
+- `GET /queue-status/:queueJobId` — Poll status of background matching job.
+- `GET /scores/:applicationId` — Retrieve candidate score breakdown.
 
 ---
 
-## Authentication & Security
+## Multi-Tenancy Isolation (`requireTenantAccess`)
 
-- **Password Hashing**: Argon2id with random salt buffers.
-- **Refresh Token Breach Defense**: If an old refresh token is reused after rotation, all active sessions for that user are immediately revoked.
+Multi-tenant security is enforced via the `requireTenantAccess` middleware ([`src/common/middlewares/tenant.middleware.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/tenant.middleware.ts)).
+
+### Execution Sequence
+$$\text{Client Request} \longrightarrow \text{authenticate} \longrightarrow \text{requireTenantAccess} \longrightarrow \text{requireRole("ADMIN")} \longrightarrow \text{Controller}$$
+
+1. **Parameter Resolution**: Resolves the target organization ID from `req.params.organizationId`, `req.params.orgId`, `req.query.organizationId`, `req.query.orgId`, `req.headers["x-organization-id"]`, or `req.headers["x-tenant-id"]`.
+2. **Server-Side Identity Verification**: Compares the requested organization ID against `req.user.organizationId` (extracted from the cryptographically verified JWT payload).
+3. **Violation Handling & Audit Logging**: Returns `403 Forbidden` on mismatch and writes an explicit `CROSS_TENANT_ACCESS_ATTEMPT` entry to the `AuditLog` table containing user ID, requested organization ID, HTTP path, method, IP address, and user agent.
+
+---
+
+## Security Features
+
+- **Password Hashing**: Argon2id with random salt buffers (`password.ts`).
+- **Refresh Token Breach Defense**: If an old refresh token is reused after rotation, all active sessions for that user are immediately revoked (`AuthSession`).
 - **Multi-Factor Auth (MFA)**: TOTP 2FA via Google Authenticator / Authy (`otplib`).
-- **CSRF Protection**: Double Submit Cookie protection (`verifyCsrf`). Stateless Bearer token requests pass through cleanly.
-- **Rate Limiting**: Rate limiters for global, auth, login, registration, and file uploads. Integrates with Redis when `REDIS_URL` is set.
-- **Security Headers**: Enforced via Helmet (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`).
+- **CSRF Protection**: Double Submit Cookie protection (`verifyCsrf`) using constant-time `crypto.timingSafeEqual()` validation.
+- **Granular Rate Limiting**: 7 Redis-backed rate limiters (`rate-limit.middleware.ts`).
+- **Security Headers & Logging Privacy**: Enforced via Helmet and Pino header redaction (`Authorization`, `Cookie`, `X-CSRF-Token`).
+- **Path Traversal Protection**: Directory boundary sanitization in file storage (`file-storage.ts`).
+- **Production Secret Validation**: Startup `superRefine()` checks rejecting default secrets when `NODE_ENV === "production"`.
 
 ---
 
-## Background Jobs, Queues & Caching
+## Docker & Production Deployment
 
-- **Async Matching Queue (`matching-queue.service.ts`)**: Heavy candidate matching operations run asynchronously in background workers, returning an immediate `202 Accepted` status to prevent HTTP request timeouts.
-- **Read-Through Caching (`cache.ts`)**: Frequently accessed published job lists (`jobs:published_list`) and active AI model configurations (`ai_models:active_model`) are cached in Redis / memory with 1-hour TTLs.
-- **Automatic Invalidation**: `createJobPost()`, `updateJobPost()`, `createModel()`, and `updateModel()` automatically invalidate affected cache keys.
-
----
-
-## Development Workflow & Testing
-
-### Running Tests
-Execute the complete end-to-end integration test suite against PostgreSQL:
-
-```bash
-npx tsx scripts/integration-test.ts
-```
-
-Verifies:
-1. CSRF token issuance.
-2. Candidate registration & login.
-3. Password reset request flow.
-4. TOTP MFA setup, verification, and MFA login.
-5. Token rotation and stolen refresh token breach defense.
-6. Job post creation, keyword configuration, matching rule setup, and publication.
-7. Candidate application intake and file streaming downloads.
-8. Hybrid AI matching engine execution & score breakdown.
-9. Asynchronous AI matching queue submission & status polling.
-10. AI model performance evaluations and metric recording.
-11. Application status state machine transitions & notification delivery.
-12. Admin dashboard statistics aggregation.
-
----
-
-## Docker Deployment
-
-### Local Docker Compose
-To start PostgreSQL and the backend API service in Docker containers:
-
+### 1. Local Docker Compose Stack
+Start PostgreSQL and the API service:
 ```bash
 docker-compose up --build
 ```
 
-### Multi-Stage Dockerfile
-Build production container image:
+### 2. Multi-Stage Production Docker Build
+The Dockerfile uses a 3-stage build (`deps` $\rightarrow$ `builder` $\rightarrow$ `runner`):
 
 ```bash
+# Build production image
 docker build -t khademni-backend:latest .
+
+# Run production container with environment file
 docker run -p 3000:3000 --env-file .env khademni-backend:latest
 ```
 
@@ -358,16 +411,14 @@ docker run -p 3000:3000 --env-file .env khademni-backend:latest
 
 ## Troubleshooting
 
-### Issue: "Invalid environment variables" on startup
-- **Solution**: Ensure all required keys (`DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`) are defined in `.env` and meet length constraints (secrets must be $\ge 32$ characters).
+### 1. Startup Error: "Invalid environment variables" / "Insecure secret key"
+- **Cause**: One or more required environment variables (`DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`) are missing or do not meet length constraints ($\ge 32$ characters). In production mode, using default development secret strings triggers startup rejection.
+- **Solution**: Provide explicit production secrets in `.env` or container environment.
 
-### Issue: "Database connection failed"
-- **Solution**: Verify PostgreSQL is running on port 5432 and `DATABASE_URL` matches your local credentials. Run `npx prisma db push` to verify connection.
+### 2. Database Connection Error
+- **Cause**: PostgreSQL is not reachable on the host/port specified in `DATABASE_URL`.
+- **Solution**: Ensure PostgreSQL is running (`docker-compose up -d db`) and execute `npx prisma migrate deploy`.
 
----
-
-## Future Roadmap
-
-1. **Web Frontend Client**: Build a modern React/Next.js web application for candidates and school recruiters.
-2. **Multi-Tenancy**: Introduce `organizationId` isolation for multi-school SaaS deployments.
-3. **Local ONNX Neural Transformer**: Integrate local ONNX transformer embeddings (`all-MiniLM-L6-v2`) for deep 384-dimensional semantic text representations.
+### 3. Redis Fallback Warning in Logs
+- **Cause**: `REDIS_URL` is not defined or Redis server is offline.
+- **Solution**: This is expected behavior during local offline development; the application automatically falls back to in-memory storage. For production, set `REDIS_URL=redis://redis_host:6379`.
