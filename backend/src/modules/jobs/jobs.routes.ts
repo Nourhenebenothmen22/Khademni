@@ -44,8 +44,8 @@ router.get(
 router.post(
   "/",
   authenticate,
-  requireRole("ADMIN"),
   requireTenantAccess,
+  requireRole("ADMIN"),
   validateBody(createJobPostSchema),
   jobsController.createJobController,
 );
@@ -53,8 +53,8 @@ router.post(
 router.put(
   "/:id",
   authenticate,
-  requireRole("ADMIN"),
   requireTenantAccess,
+  requireRole("ADMIN"),
   validateParams(jobPostParamsSchema),
   validateBody(updateJobPostSchema),
   jobsController.updateJobController,
@@ -66,8 +66,8 @@ router.get('/:jobPostId/keywords', keywordsController.getKeywordsController);
 router.post(
   '/:jobPostId/keywords',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   validateBody(bulkCreateJobKeywordsSchema),
   keywordsController.addKeywordsController,
 );
@@ -75,8 +75,8 @@ router.post(
 router.patch(
   '/:jobPostId/keywords/:id',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   validateBody(createJobKeywordSchema.partial()),
   keywordsController.updateKeywordController,
 );
@@ -84,8 +84,8 @@ router.patch(
 router.delete(
   '/:jobPostId/keywords/:id',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   keywordsController.removeKeywordController,
 );
 
@@ -93,16 +93,16 @@ router.delete(
 router.get(
   '/:jobPostId/rules',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   rulesController.getRulesController,
 );
 
 router.post(
   '/:jobPostId/rules',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   validateBody(createJobMatchingRuleSchema),
   rulesController.addRuleController,
 );
@@ -110,8 +110,8 @@ router.post(
 router.put(
   '/:jobPostId/rules/:id',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   validateBody(updateJobMatchingRuleSchema),
   rulesController.updateRuleController,
 );
@@ -119,8 +119,8 @@ router.put(
 router.delete(
   '/:jobPostId/rules/:id',
   authenticate,
-  requireRole('ADMIN'),
   requireTenantAccess,
+  requireRole('ADMIN'),
   rulesController.removeRuleController,
 );
 

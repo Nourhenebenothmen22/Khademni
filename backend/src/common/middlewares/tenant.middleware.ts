@@ -16,7 +16,14 @@ export const requireTenantAccess = (
     return next(new AppError("Authentication required.", 401));
   }
 
-  const requestedOrgId = (req.params.organizationId || req.query.organizationId || req.headers["x-organization-id"]) as string | undefined;
+  const requestedOrgId = (
+    req.params.organizationId ||
+    req.params.orgId ||
+    req.query.organizationId ||
+    req.query.orgId ||
+    req.headers["x-organization-id"] ||
+    req.headers["x-tenant-id"]
+  ) as string | undefined;
 
   if (requestedOrgId && req.user.organizationId && req.user.organizationId !== requestedOrgId) {
     logAuditAction({

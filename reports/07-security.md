@@ -69,8 +69,9 @@ RBAC is enforced using the `requireRole()` middleware ([auth.middleware.ts:L41-L
 
 ### Tenant Isolation
 - **Middleware**: `requireTenantAccess` ([tenant.middleware.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/tenant.middleware.ts)).
-- **Mechanism**: Extracts the requested organization ID from `req.params.organizationId`, `req.query.organizationId`, or `req.headers['x-organization-id']` and compares it against the authenticated user's `organizationId`. Returns 403 Forbidden on cross-tenant access attempts.
-- **Current Usage**: The middleware is defined and exported but not currently attached to any route files. It is available for organization-scoped endpoint protection.
+- **Mechanism**: Resolves requested organization ID from `req.params.organizationId`, `req.params.orgId`, `req.query.organizationId`, `req.query.orgId`, `req.headers['x-organization-id']`, or `req.headers['x-tenant-id']`. Compares it against the authenticated user's `organizationId` from the cryptographically verified JWT payload. Returns 403 Forbidden on cross-tenant access attempts.
+- **Audit Logging**: Logs `CROSS_TENANT_ACCESS_ATTEMPT` entries to `AuditLog` table containing user ID, requested organization ID, HTTP path, method, IP address, and user agent upon violation.
+- **Active Route Protection**: Attached across `jobs.routes.ts`, `applications.routes.ts`, `matching.routes.ts`, `ai-models.routes.ts`, and `admin.routes.ts` immediately after `authenticate`.
 
 ---
 

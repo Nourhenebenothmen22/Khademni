@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import { validateBody, validateQuery, validateParams } from "../../common/middlewares/validate.middleware.js";
 import { userQuerySchema } from "../../common/validators/user.validators.js";
 import { auditLogQuerySchema } from "../../common/validators/audit-log.validators.js";
@@ -9,7 +10,7 @@ import * as adminController from "./admin.controller.js";
 
 const router = Router();
 
-router.use(authenticate, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
 
 router.get("/stats", adminController.getDashboardStatsController);
 

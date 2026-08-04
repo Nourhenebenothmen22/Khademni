@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import { validateBody, validateQuery, validateParams } from "../../common/middlewares/validate.middleware.js";
 import { createMatchingRunSchema, matchingRunQuerySchema, matchingRunParamsSchema } from "../../common/validators/matching-run.validators.js";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { cuidSchema } from "../../common/validators/shared.validators.js";
 
 const router = Router();
 
-router.use(authenticate, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
 
 router.post("/run", validateBody(createMatchingRunSchema), matchingController.triggerMatchingController);
 

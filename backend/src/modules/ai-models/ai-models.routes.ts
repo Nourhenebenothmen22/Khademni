@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import { validateBody, validateQuery, validateParams } from "../../common/middlewares/validate.middleware.js";
 import { 
   createAIMatchingModelSchema, 
@@ -14,7 +15,7 @@ import * as evaluationsController from "./evaluations.controller.js";
 
 const router = Router();
 
-router.use(authenticate, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
 
 router.get("/", validateQuery(aiMatchingModelQuerySchema), aiModelsController.getModelsController);
 
