@@ -1,12 +1,25 @@
 import { rateLimit } from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
 import { env } from "../../config/env.js";
 import { logger } from "../../lib/logger.js";
+import { redisClient } from "../../lib/redis.js";
 
 const windowMs = 15 * 60 * 1000;
 
+function getStore(prefix: string) {
+  if (redisClient) {
+    return new RedisStore({
+      // @ts-ignore
+      sendCommand: (...args: string[]) => redisClient!.call(...args),
+      prefix: `rl:${prefix}:`,
+    });
+  }
+  return undefined;
+}
+
 // Log distributed rate limit store status
-if (env.REDIS_URL) {
-  logger.info({ redisUrl: env.REDIS_URL }, "Distributed rate limiting configured with Redis URL.");
+if (env.REDIS_URL && redisClient) {
+  logger.info({ redisUrl: env.REDIS_URL }, "Distributed rate limiting active via Redis.");
 } else {
   logger.info("Local in-memory rate limiting active (REDIS_URL unconfigured).");
 }
@@ -16,6 +29,7 @@ export const globalRateLimiter = rateLimit({
   limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("global"),
   message: {
     success: false,
     message: "Too many requests. Please try again later.",
@@ -27,6 +41,7 @@ export const authRateLimiter = rateLimit({
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("auth"),
   message: {
     success: false,
     message: "Too many authentication attempts. Please try again later.",
@@ -38,6 +53,7 @@ export const authLoginRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("auth_login"),
   message: {
     success: false,
     message: "Too many login attempts. Please try again after 15 minutes.",
@@ -49,6 +65,7 @@ export const authRegisterRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("auth_register"),
   message: {
     success: false,
     message:
@@ -61,6 +78,7 @@ export const authRefreshRateLimiter = rateLimit({
   limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("auth_refresh"),
   message: {
     success: false,
     message: "Too many token refresh attempts. Please try again later.",
@@ -72,6 +90,7 @@ export const authMfaRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("auth_mfa"),
   message: {
     success: false,
     message:
@@ -84,8 +103,10 @@ export const uploadRateLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  store: getStore("upload"),
   message: {
     success: false,
     message: "Too many upload attempts. Please try again later.",
   },
 });
+
