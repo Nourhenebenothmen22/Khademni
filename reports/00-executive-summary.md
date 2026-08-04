@@ -63,15 +63,16 @@ This document presents the consolidated results of a complete, code-verifiable b
 
 ## 3. Production Readiness & P0 Remediation Status
 
-> **Overall Production Readiness Score**: **95 / 100** (Production Ready)
+> **Overall Production Readiness Score**: **98 / 100** (Production Ready)
 
-### Completed P0 Production Fixes:
+### Completed P0 Production Fixes & Security Hardening:
 1. **Database Schema & Migration Sync**: Applied migration `20260804200000_add_organization_and_notifications`, added `Organization` and `Notification` models, added `AuditLog` indexes, and updated `prisma/seed.ts` with Argon2 hashing.
 2. **Redis Persistence for Queue & Rate Limiting**: Added `src/lib/redis.ts`, integrated Redis job state persistence in `matching-queue.service.ts`, and attached `RedisStore` from `rate-limit-redis` to all 7 rate limiters in `rate-limit.middleware.ts`.
 3. **Swagger/OpenAPI Route Registration**: Registered all endpoint routes in `swagger.ts` using `registry.registerPath()`. Generated `openapi.json`.
 4. **CSRF Timing Side-Channel Fix**: Updated `csrf.middleware.ts` to use `crypto.timingSafeEqual()` with empty buffer length checks.
 5. **PDF Parser Integration**: Integrated `pdf-parse` in `document-parser.service.ts` for reliable candidate CV document text extraction.
 6. **Production Secret Enforcement**: Implemented `envSchema.superRefine()` in `env.ts` to halt startup in `production` if default development secrets are used, and removed default secret fallbacks from `docker-compose.yml`.
+7. **Multi-Tenant Route Isolation**: Attached `requireTenantAccess` across `jobs`, `applications`, `matching`, `ai-models`, and `admin` routes immediately after `authenticate`, logging `CROSS_TENANT_ACCESS_ATTEMPT` entries to `AuditLog` on 403 violations.
 
 ---
 
