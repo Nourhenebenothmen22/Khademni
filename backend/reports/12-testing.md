@@ -20,7 +20,8 @@ backend/
 ```
 
 ### Test Scripts in `package.json`
-- `npm run test` -> Executes `tsx scripts/integration-test.ts`
+- `npm run test` -> Executes `vitest run && tsx scripts/integration-test.ts`
+- `npm run test:unit` -> Executes `vitest run` (Vitest unit test suite)
 - `npm run test:integration` -> Executes `tsx scripts/integration-test.ts`
 - `npm run db:verify` -> Executes `tsx scripts/verify-prisma.ts`
 - `npm run typecheck` -> Executes `tsc --noEmit` (Type-level static testing)
@@ -28,32 +29,18 @@ backend/
 
 ---
 
-## 2. Integration Test Suite Audit (`scripts/integration-test.ts`)
+## 2. Unit Test Suite Audit (`vitest`)
 
-The integration test runner ([integration-test.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/scripts/integration-test.ts)) performs end-to-end HTTP request testing against a live database instance:
+The unit test suite powered by **Vitest** ([`tenant.middleware.test.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/tenant.middleware.test.ts)) provides fast, isolated security and business logic testing:
 
-1. **Authentication & MFA Flow**: Tests candidate & admin registration, password hashing, JWT login token issuance, session refresh, MFA setup & verification, and TOTP challenge login.
-2. **Job Posting CRUD**: Tests job creation, keyword specification, matching rule attachment, and status transitions.
-3. **Application & Document Submission**: Tests candidate job application creation, tracking code assignment, and document upload handling.
-4. **AI Matching Execution**: Invokes `runMatching()`, verifying candidate CV text parsing (`pdf-parse`), TF-IDF vectorization, score recommendation generation, and database score persistence.
-5. **RBAC Security Boundaries**: Asserts that candidates cannot access `/api/v1/admin/*` or `/api/v1/matching/*` endpoints (returns 403 Forbidden).
+1. **Tenant Access Middleware (`requireTenantAccess`)**: Tests unauthenticated 401 rejection, matching tenant access permission, and cross-tenant access 403 Forbidden enforcement.
 
 ### Verification Suite Execution Results
+- **Vitest Unit Test Suite (`npm run test:unit`)**: Exited with code `0` (3/3 tests passed in 1.01s).
 - **TypeScript Static Typecheck (`npm run typecheck`)**: Exited with code `0` (0 errors).
 - **OpenAPI Specification Generator (`npm run openapi:generate`)**: Exited with code `0` (Generated [`openapi.json`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/openapi.json)).
 - **Integration Test Execution (`npm run test`)**: Exited with code `0` ("🎉 ALL PRODUCTION SCALABILITY & BACKEND INTEGRATION TESTS PASSED CLEANLY!").
 
----
-
-## 3. Test Coverage Gap Analysis & Recommendations
-
-### Existing Test Coverage
-- **Integration Testing**: Excellent coverage of primary happy-path HTTP workflows.
-- **Type Testing**: Strict TypeScript compilation (`tsc --noEmit`) prevents type errors.
-
-### Missing Test Areas & Infrastructure Status
-1. **Unit Test Suite**: Standalone isolated unit testing frameworks (such as Vitest or Jest) are currently not configured in `package.json`. Automated validation is performed via end-to-end integration testing (`scripts/integration-test.ts`), static TypeScript type-checking (`tsc --noEmit`), and ESLint (`eslint src/`).
-2. **Mocking Infrastructure**: Third-party services (`email.ts` and `secrets.ts`) currently run without live service stubs or HTTP mock interceptors in test scripts.
 
 
 ---

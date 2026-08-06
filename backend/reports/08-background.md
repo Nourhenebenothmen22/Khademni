@@ -8,7 +8,7 @@
 
 ## 1. Background Processing Architecture
 
-The platform handles asynchronous background workloads using a **Non-blocking Event Loop Queue Model** implemented inside [`matching-queue.service.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/modules/matching/matching-queue.service.ts):
+The platform handles asynchronous background workloads using a **BullMQ Distributed Queue & Worker Model** with Redis connection pooling ([`matching-queue.service.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/modules/matching/matching-queue.service.ts)):
 
 ```
 Recruiter Request (POST /api/v1/matching/jobs/:jobId/run)
@@ -17,11 +17,12 @@ Recruiter Request (POST /api/v1/matching/jobs/:jobId/run)
   [ enqueueJobMatching() Service ]
   ├─ Validates JobPost & Active AI Model
   ├─ Generates Queue Tracking ID (mq_17700000_x8f9a)
-  ├─ Stores initial state in Map ("pending", totalApplications)
+  ├─ Stores initial state ("pending", totalApplications)
+  ├─ Dispatches job to BullMQ 'matching-queue' (or falls back to setImmediate)
   └─ Returns HTTP 202 Accepted Response Immediately to Client!
                    │
                    ▼
-       setImmediate() Event Loop Yield
+       BullMQ Worker Process (`concurrency: 2`)
                    │
                    ▼
   [ processMatchingQueueJob() Worker Task ]

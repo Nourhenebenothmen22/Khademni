@@ -24,7 +24,7 @@ Welcome to the complete Architecture Audit documentation repository for the **In
 6. [`06-ai.md`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/reports/06-ai.md) — **AI Modules**  
    *Document parsers (`pdf-parse` integration), TF-IDF term vectorizer, cosine similarity math engine, model evaluations, vector DB readiness.*
 7. [`07-security.md`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/reports/07-security.md) — **Authentication & Security**  
-   *Jose JWT access/refresh tokens (≥ 32 chars), Argon2 password hashing, SHA-256 token digests, TOTP MFA, CSRF `timingSafeEqual`, Helmet, log redaction, production secret enforcement (`envSchema.superRefine`).*
+   *Jose JWT access/refresh tokens (≥ 32 chars), Argon2 password hashing, SHA-256 token digests, TOTP MFA, CSRF `timingSafeEqual`, Helmet, log redaction, production secret enforcement (`envSchema.superRefine`), complete multi-tenant query scoping across all modules (`organizationId`), and transactional session rotation (`refreshSession`) with 10s grace period and breach detection.*
 8. [`08-background.md`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/reports/08-background.md) — **Background Processing**  
    *Asynchronous matching queue with Redis state persistence (`matching_job:<id>` 24h TTL) and in-memory fallback, non-blocking workers.*
 9. [`09-configuration.md`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/reports/09-configuration.md) — **Configuration**  

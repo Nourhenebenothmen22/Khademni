@@ -19,7 +19,7 @@ backend/src/
 │       └── async-handler.ts   # Express async wrapper function
 └── lib/
     ├── audit.ts               # Asynchronous fire-and-forget audit logger
-    ├── cache.ts               # Memory Map TTL cache
+    ├── cache.ts               # Redis & in-memory TTL cache with fallback
     ├── email.ts               # Nodemailer transporter & template renderer
     ├── file-storage.ts        # Disk storage with path traversal validation
     ├── jwt.ts                 # Jose JWT sign & verify wrappers

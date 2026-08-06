@@ -36,6 +36,12 @@ Authentication is powered by **Jose JWT Library (`jose`)** and **Argon2 Password
 | **Payload Content** | `userId`, `role`, `organizationId`, `jti` | `userId`, `role`, `organizationId`, `jti` |
 | **Storage Location** | `Authorization: Bearer` header or `access_token` Cookie | `refresh_token` HTTP-Only Cookie & Database Hash |
 
+### Refresh Token Rotation & Race Condition Defense
+- **Interactive Prisma Transaction**: `refreshSession` ([auth.service.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/modules/auth/auth.service.ts)) executes inside an interactive transaction (`prisma.$transaction`).
+- **Atomic Session Claiming**: Uses optimistic locking via `tx.authSession.updateMany({ where: { refreshTokenHash, revokedAt: null, expiresAt: { gt: now } }, data: { revokedAt: now } })` to ensure only one concurrent request can claim an active refresh session.
+- **10-Second Grace Period**: If a token has already been revoked within $\le 10$ seconds (`now - revokedAt <= 10s`), it is treated as a legitimate concurrent network retry. New valid tokens are issued without revoking all user sessions.
+- **Breach Detection & Total Session Invalidated**: Reusing a refresh token after the 10-second grace period ($\Delta t > 10\text{s}$) indicates a stolen token reuse attack. All active sessions for the user are immediately revoked (`revokedAt = now`), a `SECURITY_BREACH_REFRESH_TOKEN_REUSE` event is logged to `AuditLog`, and HTTP 401 Unauthorized is returned.
+
 ---
 
 ## 2. Password Hashing & Secret Management
@@ -69,7 +75,16 @@ RBAC is enforced using the `requireRole()` middleware ([auth.middleware.ts:L41-L
 
 ### Tenant Isolation
 - **Middleware**: `requireTenantAccess` ([tenant.middleware.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/tenant.middleware.ts)).
-- **Mechanism**: Resolves requested organization ID from `req.params.organizationId`, `req.params.orgId`, `req.query.organizationId`, `req.query.orgId`, `req.headers['x-organization-id']`, or `req.headers['x-tenant-id']`. Compares it against the authenticated user's `organizationId` from the cryptographically verified JWT payload. Returns 403 Forbidden on cross-tenant access attempts.
+- **HTTP Header/Parameter Resolution**: Resolves requested organization ID from `req.params.organizationId`, `req.params.orgId`, `req.query.organizationId`, `req.query.orgId`, `req.headers['x-organization-id']`, or `req.headers['x-tenant-id']`. Compares it against the authenticated user's `organizationId` from the cryptographically verified JWT payload. Returns 403 Forbidden on cross-tenant access attempts.
+- **Controller-Level Org Extraction**: Enforces `getOrganizationId(req)` helper across controllers (`admin.controller.ts`, `jobs.controller.ts`, `applications.controller.ts`, `matching.controller.ts`), extracting `req.user.organizationId` directly from the authenticated JWT payload and raising a 403 Forbidden if missing.
+- **Service-Level Query Scoping**: All Prisma queries across business services are strongly typed (`Prisma.UserWhereInput`, `Prisma.JobPostWhereInput`, `Prisma.ApplicationWhereInput`, `Prisma.MatchingRunWhereInput`, `Prisma.AuditLogWhereInput`) and explicitly scoped by `organizationId`:
+  - `admin.service.ts`: Scopes users (`organizationId`), job posts (`organizationId`), applications (`jobPost: { organizationId }`), audit logs (`organizationId`), and performs atomic `updateMany` for user status toggles.
+  - `jobs.service.ts`: Scopes `createJobPost` with `organizationId` from JWT, `updateJobPost` with `findFirst({ where: { id, organizationId } })`, and `deleteJobPost` with `findFirst({ where: { id, organizationId } })`.
+  - `applications.service.ts`: Scopes `getApplications` and `updateApplicationStatus` with `jobPost: { organizationId }`, and cleans up physical CV files on storage errors.
+  - `matching.service.ts`: Scopes `runMatching`, `runMatchingForJob`, `getMatchingRun`, `getMatchingRuns`, and `getApplicationScore` with `jobPost: { organizationId }`.
+- **JWT Refresh Token Propagation**: `auth.service.ts` (`refreshSession`) explicitly retains `organizationId` during token rotation (`signAccessToken` and `signRefreshToken`), ensuring active session context is preserved across token refreshes.
+- **Tenant-Aware Audit Logging**: `logAuditAction({ userId, organizationId, action, entityType, entityId, metadata })` in `lib/audit.ts` populates `organizationId` across all modules (`auth`, `users`, `jobs`, `applications`, `admin`), enabling tenant-specific audit trails.
+- **Profile Email Security**: When a user changes their email address via `updateProfile` in `users.service.ts`, `isEmailVerified` is automatically set to `false`, a new email verification token is created, and `sendVerificationEmail` is dispatched post-commit to verify ownership of the new email address.
 - **Audit Logging**: Logs `CROSS_TENANT_ACCESS_ATTEMPT` entries to `AuditLog` table containing user ID, requested organization ID, HTTP path, method, IP address, and user agent upon violation.
 - **Active Route Protection**: Attached across `jobs.routes.ts`, `applications.routes.ts`, `matching.routes.ts`, `ai-models.routes.ts`, and `admin.routes.ts` immediately after `authenticate`.
 

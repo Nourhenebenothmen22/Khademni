@@ -59,15 +59,15 @@ The schema establishes targeted indexes to accelerate high-frequency queries:
 
 | Model | Index Target | Query Purpose |
 | :--- | :--- | :--- |
-| `User` | `@@index([role])`, `@@index([organizationId])` | Role filtering and tenant isolation |
+| `User` | `@@index([role])`, `@@index([organizationId])`, `@@index([organizationId, role])` | Role filtering and compound tenant-scoped user management |
 | `AuthSession` | `@@index([userId])`, `@@index([userId, revokedAt])` | Fast session lookup and revocation verification |
-| `JobPost` | `@@index([status])`, `@@index([createdById])`, `@@index([organizationId])` | Job search by status, recruiter dashboard queries |
+| `JobPost` | `@@index([status])`, `@@index([createdById])`, `@@index([organizationId])`, `@@index([organizationId, status])` | Job search by status, tenant-scoped recruiter dashboard queries |
 | `JobKeyword` | `@@index([jobPostId])`, `@@index([jobPostId, type])` | Candidate matching keyword fetches |
 | `Application` | `@@index([jobPostId])`, `@@index([status])` | Recruiter application listing and status filtering |
 | `ApplicationDocument` | `@@index([sha256])` | File duplicate detection |
 | `MatchingRun` | `@@index([applicationId])`, `@@index([status])`, `@@index([modelId])` | Matching run history and queue status lookup |
 | `ApplicationScore` | `@@index([finalScore])` | Ranking candidates by match score |
-| `AuditLog` | `@@index([userId])`, `@@index([action])`, `@@index([entityType, entityId])`, `@@index([createdAt])` | Security audit searches, entity tracking, time-series queries |
+| `AuditLog` | `@@index([userId])`, `@@index([organizationId])`, `@@index([organizationId, createdAt])`, `@@index([action])`, `@@index([entityType, entityId])`, `@@index([createdAt])` | Security audit searches, tenant-scoped audit queries, time-series queries |
 | `Notification` | `@@index([userId, isRead])`, `@@index([createdAt])` | User unread notification count badge |
 
 ---

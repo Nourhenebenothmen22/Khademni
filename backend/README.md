@@ -31,7 +31,7 @@ The **Intelligent Teacher Recruitment Platform Backend** provides a multi-tenant
 
 ### Core Capabilities
 - **Auth & Identity**: Role-based access control (`ADMIN`, `CANDIDATE`), Argon2 password hashing, dual JWT rotation with breach defense, and Time-based One-Time Password (TOTP 2FA via `otplib`).
-- **Multi-Tenant Isolation**: Enforces tenant organization boundaries via `requireTenantAccess` middleware and `organizationId` claims with automatic `CROSS_TENANT_ACCESS_ATTEMPT` audit logging.
+- **Multi-Tenant Isolation**: Enforces tenant boundaries via `requireTenantAccess` middleware, controller-level `getOrganizationId(req)` extraction, service-level Prisma query scoping (`organizationId`), atomic `updateMany` mutations, and automatic `CROSS_TENANT_ACCESS_ATTEMPT` audit logging.
 - **Job & Requirement Management**: Job listings with status transitions (`DRAFT`, `PUBLISHED`, `CLOSED`, `ARCHIVED`), weighted keywords (`REQUIRED`, `OPTIONAL`, `BONUS`), and rule criteria (`DEGREE`, `EXPERIENCE`, `CERTIFICATION`, `CUSTOM`).
 - **Candidate CV Intake & Parsing**: File streaming upload with Multer, path-traversal disk storage security, SHA-256 document checksum deduplication, and PDF text extraction via `pdf-parse`.
 - **Hybrid AI Matching Engine**: Composite candidate scoring engine combining keyword matching, deterministic rule criteria evaluation, and TF-IDF cosine similarity term vectorization.

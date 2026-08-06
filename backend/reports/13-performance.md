@@ -23,8 +23,11 @@
 
 ## 3. Caching Strategy Audit
 
-The platform employs a centralized in-memory TTL Cache ([cache.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/cache.ts)):
+The platform employs a centralized dual-tier Redis & in-memory TTL Cache ([cache.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/cache.ts)):
 
+- **Distributed & Hybrid Storage**:
+  - Uses `redisClient` (`SETEX`, `GET`, `DEL`) when `REDIS_URL` is set to provide cluster-wide distributed cache synchronization across multi-replica deployments.
+  - Seamlessly falls back to an in-memory `Map` (`memoryCache`) with automatic periodic expiration cleanup when Redis is unconfigured or temporarily unreachable.
 - **Cached Resources**:
   - `PUBLISHED_JOBS_CACHE_KEY` ("jobs:published_list") -> Caches public job search listings (default TTL 1 hour).
   - `ACTIVE_AI_MODEL_CACHE_KEY` ("ai_models:active_model") -> Caches active AI model metadata.
@@ -36,6 +39,7 @@ The platform employs a centralized in-memory TTL Cache ([cache.ts](file:///c:/fu
 
 ## 4. Scalability Bottlenecks & Recommendations
 
-1. **In-Memory Cache Scaling**: Swap `memoryCache` Map with Redis (`ioredis`) for multi-replica horizontal scaling.
+1. **Distributed Multi-Node Cache**: Fully implemented via `cache.ts` using `redisClient` for multi-instance horizontal container scaling.
 2. **File Streaming**: `getFileStream()` in `file-storage.ts` uses Node.js `fs.createReadStream()`, streaming large PDF/DOCX downloads with constant low memory overhead ($O(1)$ memory).
 3. **Response Compression**: Gzip compression via `compression()` middleware reduces JSON network payload sizes by up to $70\%$.
+

@@ -90,7 +90,7 @@ All rate limiters automatically attach `RedisStore` from `rate-limit-redis` via 
 
 ### 8. Tenant Isolation Middleware (`tenant.middleware.ts`)
 - **Function**: `requireTenantAccess` ([tenant.middleware.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/tenant.middleware.ts)).
-- **Protected Routes**: Attached across `jobs.routes.ts`, `applications.routes.ts`, `matching.routes.ts`, `ai-models.routes.ts`, and `admin.routes.ts` immediately after `authenticate`.
+- **Protected Routes**: Attached across `jobs.routes.ts` (including `POST /api/v1/jobs/:jobId/apply` with `validateParams`), `applications.routes.ts` (including `GET /me` with `validateQuery`), `matching.routes.ts`, `ai-models.routes.ts`, and `admin.routes.ts` immediately after `authenticate`.
 - **Mechanism**: Resolves requested organization ID from `req.params.organizationId`, `req.params.orgId`, `req.query.organizationId`, `req.query.orgId`, `req.headers['x-organization-id']`, or `req.headers['x-tenant-id']`. Compares it against `req.user.organizationId` (from verified JWT). Returns 403 Forbidden on mismatch.
 - **Audit Tracking**: Automatically records a `CROSS_TENANT_ACCESS_ATTEMPT` entry in `AuditLog` containing user ID, requested organization ID, HTTP path, method, IP address, and user agent upon access violation.
 

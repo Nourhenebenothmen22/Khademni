@@ -42,6 +42,7 @@ Every incoming HTTP request undergoes a structured, step-by-step pipeline:
        │
 4. Feature Sub-Router Match (/api/v1/:module)
    ├─ Auth Middleware (authenticate) -> Attaches req.user
+   ├─ Tenant Isolation Middleware (requireTenantAccess) -> Enforces organization boundary
    ├─ RBAC Middleware (requireRole) -> Verifies user permissions
    └─ Validation Middleware (validateBody/validateQuery) -> Validates Zod Schema
        │
@@ -75,12 +76,38 @@ Routes use `@asteasolutions/zod-to-openapi` to automatically project Zod schemas
 
 ## 4. Response Standardization & Error Contract
 
-### Standard Success Response Format
+### Standard Single Resource Success Response Format
 ```json
 {
   "success": true,
   "data": { ... },
   "message": "Optional descriptive summary message"
+}
+```
+
+### Standard Paginated List Success Response Format
+All paginated list endpoints (e.g. `GET /api/v1/jobs`, `GET /api/v1/applications`, `GET /api/v1/applications/me`, `GET /api/v1/admin/users`, `GET /api/v1/admin/audit-logs`) return:
+```json
+{
+  "success": true,
+  "data": [ ... ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "totalPages": 5
+  }
+}
+```
+
+### Standard Action & Deletion Response Format
+Action and deletion responses (e.g. `DELETE /api/v1/jobs/:id`, `POST /api/v1/auth/verify-email`, `POST /api/v1/auth/forgot-password`) return:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Operation completed successfully."
+  }
 }
 ```
 
@@ -100,7 +127,14 @@ Routes use `@asteasolutions/zod-to-openapi` to automatically project Zod schemas
 
 ---
 
-## 5. API Versioning Strategy
+## 5. Route Protection & Parameter Validation Highlights
+
+- **`POST /api/v1/jobs/:jobId/apply`**: Protected by `authenticate`, `requireTenantAccess`, `uploadRateLimiter`, and `validateParams(z.object({ jobId: cuidSchema }))`.
+- **`GET /api/v1/applications/me`**: Protected by `authenticate`, `requireTenantAccess`, `requireRole("CANDIDATE")`, and `validateQuery(myApplicationsQuerySchema)` with `meta` pagination response format.
+
+---
+
+## 6. API Versioning Strategy
 
 - **URL Prefix Versioning**: API versioning is managed via explicit URI segment `/api/v1/`.
 - **Extensibility**: Non-breaking updates maintain `/api/v1/`, while major breaking structural revisions can be mounted alongside under `/api/v2/`.

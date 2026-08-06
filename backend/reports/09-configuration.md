@@ -34,8 +34,8 @@ Configuration loading is strictly validated using Zod inside [`backend/src/confi
 | `APP_URL` | `string` | `http://localhost:3000` | Backend application URL |
 | `FRONTEND_URL` | `string` | `http://localhost:5173` | Frontend application URL (used in email links) |
 
-### Production Secret Enforcement
-`env.ts` enforces `.superRefine()` runtime validation when `NODE_ENV === "production"`. Boot fails immediately (`process.exit(1)`) if default development secrets (`prod_access_secret_...`, `prod_refresh_secret_...`, `khademni_csrf_secret_...`, `recruitment_secure_pass_123`) are used in production environments.
+### Production Secret & Infrastructure Enforcement
+`env.ts` enforces `.superRefine()` runtime validation when `NODE_ENV === "production"`. Boot fails immediately (`process.exit(1)`) if default development secrets (`prod_access_secret_...`, `prod_refresh_secret_...`, `khademni_csrf_secret_...`, `recruitment_secure_pass_123`) are used in production environments, or if required production infrastructure configuration (such as mandatory `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` for email delivery) is missing.
 
 ---
 
