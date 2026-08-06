@@ -45,15 +45,24 @@ async function runIntegrationTest() {
     const candidateUserId = regCandidateData.data.id;
     console.log('  ✅ Candidate registered.');
 
+    const testOrg = await prisma.organization.create({
+      data: {
+        name: 'Test School Organization',
+        slug: `test-school-${Date.now()}`,
+      },
+    });
+
     const adminUser = await prisma.user.create({
       data: {
         fullName: 'Admin User',
         email: adminEmail,
         passwordHash: candidateUserId,
         role: 'ADMIN',
+        organizationId: testOrg.id,
         isEmailVerified: true,
       },
     });
+
 
     const loginRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
@@ -160,7 +169,8 @@ async function runIntegrationTest() {
     // 5. Job Creation, Keywords & Matching Rules
     console.log('🔹 [Jobs] Testing Admin Job Creation, Keywords & Matching Rules...');
     const { signAccessToken } = await import('../src/lib/jwt.js');
-    const adminToken = await signAccessToken({ userId: adminUser.id, role: 'ADMIN' });
+    const adminToken = await signAccessToken({ userId: adminUser.id, role: 'ADMIN', organizationId: testOrg.id });
+
 
     const createJobRes = await fetch(`${baseUrl}/jobs`, {
       method: 'POST',
@@ -386,10 +396,10 @@ async function runIntegrationTest() {
       headers: { Authorization: `Bearer ${candidateToken}` },
     });
     const notifData = await notifRes.json();
-    if (!notifRes.ok || notifData.data.items.length === 0) {
+    if (!notifRes.ok || notifData.data.length === 0) {
       throw new Error(`Notifications test failed: ${JSON.stringify(notifData)}`);
     }
-    console.log(`  ✅ In-app notifications received: ${notifData.data.items.length} notification(s). Latest title: "${notifData.data.items[0].title}"`);
+    console.log(`  ✅ In-app notifications received: ${notifData.data.length} notification(s). Latest title: "${notifData.data[0].title}"`);
 
     // 10. Admin Dashboard Statistics
     console.log('🔹 [Admin] Testing Admin Dashboard Statistics...');
