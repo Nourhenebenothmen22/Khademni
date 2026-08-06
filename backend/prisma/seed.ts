@@ -2,7 +2,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import argon2 from "argon2";
 
-const connectionString = process.env.DATABASE_URL ?? "postgresql://recruitment_user:recruitment_secure_pass_123@localhost:5432/recruitment_db?schema=public";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("DATABASE_URL environment variable is required to run prisma seed script.");
+  process.exit(1);
+}
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 

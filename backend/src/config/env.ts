@@ -84,6 +84,14 @@ const envSchema = z
           path: ["DATABASE_URL"],
         });
       }
+      if (!data.SMTP_HOST || !data.SMTP_USER || !data.SMTP_PASS) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Production environment requires complete SMTP configuration (SMTP_HOST, SMTP_USER, SMTP_PASS).",
+          path: ["SMTP_HOST"],
+        });
+      }
     }
   });
 
