@@ -61,8 +61,27 @@ export const applicationQuerySchema = z.object({
 
 export type ApplicationQuery = z.infer<typeof applicationQuerySchema>;
 
+export const myApplicationsQuerySchema = z.object({
+  status: applicationStatusEnum.optional(),
+  ...paginationSchema.shape,
+  sortBy: z
+    .enum(["submittedAt", "status", "createdAt"])
+    .default("createdAt")
+    .optional(),
+  sortOrder: sortOrderSchema.optional(),
+});
+
+export type MyApplicationsQuery = z.infer<typeof myApplicationsQuerySchema>;
+
 export const applicationParamsSchema = z.object({
   id: cuidSchema,
 });
 
 export type ApplicationParams = z.infer<typeof applicationParamsSchema>;
+
+export const downloadDocumentParamsSchema = z.object({
+  id: cuidSchema,
+  docId: cuidSchema,
+});
+
+export type DownloadDocumentParams = z.infer<typeof downloadDocumentParamsSchema>;

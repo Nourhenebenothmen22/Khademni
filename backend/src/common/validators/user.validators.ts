@@ -40,4 +40,12 @@ export const userQuerySchema = z.object({
   sortOrder: sortOrderSchema.optional(),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: strongPasswordSchema,
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 export type UserQuery = z.infer<typeof userQuerySchema>;
+
