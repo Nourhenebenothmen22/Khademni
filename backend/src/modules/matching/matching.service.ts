@@ -38,9 +38,16 @@ function getDegreeRank(text: string, degreeHierarchy: Record<string, number>): n
   return highest;
 }
 
-export async function runMatching(applicationId: string, modelId: string) {
-  const application = await prisma.application.findUnique({
-    where: { id: applicationId },
+export async function runMatching(
+  applicationId: string,
+  modelId: string,
+  organizationId?: string,
+) {
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      ...(organizationId ? { jobPost: { organizationId } } : {}),
+    },
     include: {
       candidate: true,
       jobPost: {
@@ -52,7 +59,7 @@ export async function runMatching(applicationId: string, modelId: string) {
     },
   });
 
-  if (!application) throw new AppError("Application not found", 404);
+  if (!application) throw new AppError("Application not found or access denied", 404);
   if (!application.jobPost) throw new AppError("Job post not found", 404);
 
   const model = await prisma.aIMatchingModel.findUnique({
@@ -342,7 +349,17 @@ export async function runMatching(applicationId: string, modelId: string) {
   }
 }
 
-export async function runMatchingForJob(jobPostId: string, modelId: string) {
+export async function runMatchingForJob(
+  jobPostId: string,
+  modelId: string,
+  organizationId?: string,
+) {
+  const job = await prisma.jobPost.findFirst({
+    where: { id: jobPostId, ...(organizationId ? { organizationId } : {}) },
+  });
+
+  if (!job) throw new AppError("Job post not found or access denied", 404);
+
   const applications = await prisma.application.findMany({
     where: { jobPostId, status: { notIn: ["WITHDRAWN", "REJECTED"] } },
   });
@@ -356,9 +373,12 @@ export async function runMatchingForJob(jobPostId: string, modelId: string) {
   return runs;
 }
 
-export async function getMatchingRun(runId: string) {
-  const run = await prisma.matchingRun.findUnique({
-    where: { id: runId },
+export async function getMatchingRun(runId: string, organizationId?: string) {
+  const run = await prisma.matchingRun.findFirst({
+    where: {
+      id: runId,
+      ...(organizationId ? { application: { jobPost: { organizationId } } } : {}),
+    },
     include: {
       application: {
         include: { candidate: { select: { id: true, fullName: true, email: true } } },
@@ -368,16 +388,22 @@ export async function getMatchingRun(runId: string) {
     },
   });
 
-  if (!run) throw new AppError("Matching run not found", 404);
+  if (!run) throw new AppError("Matching run not found or access denied", 404);
   return run;
 }
 
-export async function getMatchingRuns(query: MatchingRunQuery) {
+export async function getMatchingRuns(
+  query: MatchingRunQuery,
+  organizationId?: string,
+) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Record<string, unknown> = {};
+  if (organizationId) {
+    where.application = { jobPost: { organizationId } };
+  }
   if (query.applicationId) where.applicationId = query.applicationId;
   if (query.modelId) where.modelId = query.modelId;
   if (query.status) where.status = query.status;
@@ -399,14 +425,20 @@ export async function getMatchingRuns(query: MatchingRunQuery) {
   return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
-export async function getApplicationScore(applicationId: string) {
-  const score = await prisma.applicationScore.findUnique({
-    where: { applicationId },
+export async function getApplicationScore(
+  applicationId: string,
+  organizationId?: string,
+) {
+  const score = await prisma.applicationScore.findFirst({
+    where: {
+      applicationId,
+      ...(organizationId ? { application: { jobPost: { organizationId } } } : {}),
+    },
     include: {
       matchingRun: true,
     },
   });
 
-  if (!score) throw new AppError("Application score not found", 404);
+  if (!score) throw new AppError("Application score not found or access denied", 404);
   return score;
 }

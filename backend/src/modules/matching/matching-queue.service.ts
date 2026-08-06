@@ -1,8 +1,10 @@
+import { Queue, Worker, Job } from "bullmq";
 import { nanoid } from "nanoid";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logger } from "../../lib/logger.js";
 import { redisClient } from "../../lib/redis.js";
+import { env } from "../../config/env.js";
 import { runMatching } from "./matching.service.js";
 
 export type MatchingJobStatusType = "pending" | "processing" | "completed" | "failed";
@@ -25,6 +27,34 @@ export interface MatchingJobState {
 const matchingJobsStore = new Map<string, MatchingJobState>();
 const JOB_KEY_PREFIX = "matching_job:";
 const JOB_TTL_SECONDS = 86400; // 24 hours
+const QUEUE_NAME = "matching-queue";
+
+let matchingQueue: Queue | null = null;
+let matchingWorker: Worker | null = null;
+
+if (env.REDIS_URL) {
+  try {
+    const connection = { url: env.REDIS_URL };
+    matchingQueue = new Queue(QUEUE_NAME, { connection });
+
+    matchingWorker = new Worker(
+      QUEUE_NAME,
+      async (job: Job) => {
+        const { queueJobId, applicationIds, modelId } = job.data;
+        await processMatchingQueueJob(queueJobId, applicationIds, modelId);
+      },
+      { connection, concurrency: 2 },
+    );
+
+    matchingWorker.on("failed", (job, err) => {
+      logger.error({ queueJobId: job?.data?.queueJobId, err: err.message }, "BullMQ matching worker job failed");
+    });
+
+    logger.info("BullMQ matching queue and worker initialized successfully.");
+  } catch (err: any) {
+    logger.warn({ err: err?.message }, "Failed to initialize BullMQ, falling back to local processing.");
+  }
+}
 
 async function saveJobState(state: MatchingJobState): Promise<void> {
   matchingJobsStore.set(state.queueJobId, state);
@@ -57,7 +87,7 @@ async function loadJobState(queueJobId: string): Promise<MatchingJobState | null
 
 /**
  * Enqueues an asynchronous batch matching execution for all applications of a job post.
- * Returns immediately with a queue tracking ID.
+ * Uses BullMQ distributed queue if Redis is configured, or falls back to in-memory processing.
  */
 export async function enqueueJobMatching(
   jobPostId: string,
@@ -74,7 +104,6 @@ export async function enqueueJobMatching(
     throw new AppError("Job post not found.", 404);
   }
 
-  // Resolve model ID (or use active model)
   let activeModelId = modelId;
   if (!activeModelId) {
     const activeModel = await prisma.aIMatchingModel.findFirst({
@@ -102,17 +131,24 @@ export async function enqueueJobMatching(
 
   await saveJobState(initialState);
 
-  // Trigger background processing asynchronously without blocking HTTP response
-  setImmediate(() => {
-    processMatchingQueueJob(queueJobId, job.applications.map((a) => a.id), activeModelId as string).catch(
-      (error) => {
+  const applicationIds = job.applications.map((a) => a.id);
+
+  if (matchingQueue) {
+    await matchingQueue.add("processMatching", {
+      queueJobId,
+      applicationIds,
+      modelId: activeModelId,
+    });
+  } else {
+    setImmediate(() => {
+      processMatchingQueueJob(queueJobId, applicationIds, activeModelId as string).catch((error) => {
         logger.error({ error, queueJobId }, "Background matching worker failed");
-      },
-    );
-  });
+      });
+    });
+  }
 
   logger.info(
-    { queueJobId, jobPostId, totalApplications: initialState.totalApplications },
+    { queueJobId, jobPostId, totalApplications: initialState.totalApplications, mode: matchingQueue ? "BullMQ" : "local" },
     "Enqueued background AI matching job.",
   );
 
@@ -145,8 +181,9 @@ async function processMatchingQueueJob(
   try {
     for (let i = 0; i < applicationIds.length; i++) {
       const appId = applicationIds[i];
+      if (!appId) continue;
       try {
-        await runMatching(appId as string, modelId);
+        await runMatching(appId, modelId);
         state.processedCount++;
       } catch (error) {
         state.failedCount++;
@@ -182,4 +219,3 @@ export async function getMatchingJobStatus(queueJobId: string): Promise<Matching
   }
   return state;
 }
-
