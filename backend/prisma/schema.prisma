@@ -126,6 +126,7 @@ model User {
 
   @@index([role])
   @@index([organizationId])
+  @@index([organizationId, role])
   @@map("users")
 }
 
@@ -167,6 +168,7 @@ model JobPost {
   @@index([status])
   @@index([createdById])
   @@index([organizationId])
+  @@index([organizationId, status])
   @@map("job_posts")
 }
 
@@ -219,6 +221,7 @@ model Application {
   statusHistory    ApplicationStatusHistory[]
 
   @@unique([candidateId, jobPostId])
+  @@index([candidateId])
   @@index([jobPostId])
   @@index([status])
   @@map("applications")
@@ -381,6 +384,7 @@ model AuditLog {
 
   @@index([userId])
   @@index([organizationId])
+  @@index([organizationId, createdAt])
   @@index([action])
   @@index([entityType, entityId])
   @@index([createdAt])

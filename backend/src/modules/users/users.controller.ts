@@ -38,3 +38,21 @@ export async function updateProfileController(
     next(error);
   }
 }
+
+export async function changePasswordController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const result = await usersService.changePassword(userId, req.body);
+    res.status(200).json({
+      success: true,
+      data: { message: result.message },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

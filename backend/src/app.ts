@@ -1,6 +1,7 @@
-import path from "node:path";
+import "./config/zod-openapi.js";
 import crypto from "node:crypto";
 import express, { type Request, type Response, type NextFunction } from "express";
+import { z } from "zod";
 import swaggerUi from "swagger-ui-express";
 import { applySecurityMiddleware } from "./common/middlewares/security.middleware.js";
 import { verifyCsrf } from "./common/middlewares/csrf.middleware.js";
@@ -11,7 +12,12 @@ import {
 import { notFoundMiddleware } from "./common/middlewares/not-found.middleware.js";
 import { globalErrorHandler } from "./common/middlewares/error.middleware.js";
 import { authenticate } from "./common/middlewares/auth.middleware.js";
+import { requireTenantAccess } from "./common/middlewares/tenant.middleware.js";
+import { validateParams } from "./common/middlewares/validate.middleware.js";
+import { cuidSchema } from "./common/validators/shared.validators.js";
+
 import { upload } from "./common/middlewares/upload.middleware.js";
+
 import { openApiDocument } from "./config/swagger.js";
 import { prisma } from "./lib/prisma.js";
 import { env } from "./config/env.js";
@@ -24,6 +30,7 @@ import { adminRouter } from "./modules/admin/admin.routes.js";
 import { matchingRouter } from "./modules/matching/matching.routes.js";
 import { aiModelsRouter } from "./modules/ai-models/ai-models.routes.js";
 import { notificationsRouter } from "./modules/notifications/notifications.routes.js";
+import { organizationsRouter } from "./modules/organizations/organizations.routes.js";
 import { applyToJobController } from "./modules/applications/applications.controller.js";
 
 const app = express();
@@ -41,8 +48,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 applySecurityMiddleware(app);
 
-// Serve static uploads directory securely
-app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
+
 
 // Enhanced Health Check with DB connectivity check
 app.get("/health", async (_req: Request, res: Response) => {
@@ -83,12 +89,16 @@ app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/matching", matchingRouter);
 app.use("/api/v1/ai-models", aiModelsRouter);
 app.use("/api/v1/notifications", notificationsRouter);
+app.use("/api/v1/organizations", organizationsRouter);
+
 
 // Job Application Upload Route
 app.post(
   "/api/v1/jobs/:jobId/apply",
   authenticate,
+  requireTenantAccess,
   uploadRateLimiter,
+  validateParams(z.object({ jobId: cuidSchema })),
   upload.single("file"),
   applyToJobController,
 );

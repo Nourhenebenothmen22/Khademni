@@ -3,6 +3,7 @@ import { logger } from "./logger.js";
 
 interface AuditLogInput {
   userId: string;
+  organizationId?: string;
   action: string;
   entityType: string;
   entityId: string;
@@ -20,6 +21,7 @@ export function logAuditAction(input: AuditLogInput): void {
     .create({
       data: {
         userId: input.userId,
+        organizationId: input.organizationId,
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,

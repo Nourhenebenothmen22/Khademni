@@ -60,6 +60,16 @@ router.put(
   jobsController.updateJobController,
 );
 
+router.delete(
+  "/:id",
+  authenticate,
+  requireTenantAccess,
+  requireRole("ADMIN"),
+  validateParams(jobPostParamsSchema),
+  jobsController.deleteJobController,
+);
+
+
 // ─── Job Keywords ──────────────────────────────────────────────
 router.get('/:jobPostId/keywords', keywordsController.getKeywordsController);
 

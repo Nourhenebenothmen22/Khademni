@@ -19,7 +19,12 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
 
 // Register all exported Zod schemas from common/validators
 Object.entries(validators).forEach(([name, schema]) => {
-  if (schema && typeof schema === "object" && schema instanceof z.ZodType) {
+  if (
+    schema &&
+    typeof schema === "object" &&
+    schema instanceof z.ZodType &&
+    typeof (schema as any).openapi === "function"
+  ) {
     registry.register(name, schema);
   }
 });

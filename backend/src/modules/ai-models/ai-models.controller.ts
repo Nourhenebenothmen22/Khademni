@@ -23,7 +23,7 @@ export async function getModelsController(
 ): Promise<void> {
   try {
     const result = await aiModelsService.getModels(req.query as unknown as AIMatchingModelQuery);
-    res.status(200).json({ success: true, data: result.items, pagination: result.pagination });
+    res.status(200).json({ success: true, data: result.items, meta: result.pagination });
   } catch (error) {
     next(error);
   }

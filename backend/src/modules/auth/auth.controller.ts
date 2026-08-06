@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "../../common/middlewares/auth.middleware.js";
 import * as authService from "./auth.service.js";
+import { env } from "../../config/env.js";
 
 export async function registerController(
   req: AuthenticatedRequest,
@@ -30,7 +31,7 @@ export async function verifyEmailController(
     const result = await authService.verifyEmail(req.body);
     res.status(200).json({
       success: true,
-      message: result.message,
+      data: { message: result.message },
     });
   } catch (error) {
     next(error);
@@ -60,7 +61,7 @@ export async function loginController(
     if (result.refreshToken) {
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: env.NODE_ENV === "production",
         sameSite: "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
@@ -69,7 +70,7 @@ export async function loginController(
     if (result.accessToken) {
       res.cookie("access_token", result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: env.NODE_ENV === "production",
         sameSite: "strict",
         maxAge: 15 * 60 * 1000,
       });
@@ -100,14 +101,14 @@ export async function loginMfaController(
 
     res.cookie("refresh_token", result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("access_token", result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 15 * 60 * 1000,
     });
@@ -129,7 +130,7 @@ export async function refreshController(
   try {
     const refreshToken =
       req.body?.refreshToken ||
-      (req.cookies ? req.cookies.refresh_token : undefined);
+      (req.cookies ? (req.cookies.refresh_token || req.cookies.refreshToken) : undefined);
 
     if (!refreshToken) {
       res.status(401).json({
@@ -149,14 +150,14 @@ export async function refreshController(
 
     res.cookie("refresh_token", result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("access_token", result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 15 * 60 * 1000,
     });
@@ -189,7 +190,7 @@ export async function logoutController(
 
     res.status(200).json({
       success: true,
-      message: "Logged out successfully.",
+      data: { message: "Logged out successfully." },
     });
   } catch (error) {
     next(error);
@@ -223,7 +224,7 @@ export async function verifyMfaController(
     const result = await authService.verifyMfa(userId, req.body);
     res.status(200).json({
       success: true,
-      message: result.message,
+      data: { message: result.message },
     });
   } catch (error) {
     next(error);
@@ -237,7 +238,7 @@ export async function requestPasswordResetController(
 ): Promise<void> {
   try {
     const result = await authService.requestPasswordReset(req.body.email);
-    res.status(200).json({ success: true, message: result.message });
+    res.status(200).json({ success: true, data: { message: result.message } });
   } catch (error) {
     next(error);
   }
@@ -250,7 +251,7 @@ export async function resetPasswordController(
 ): Promise<void> {
   try {
     const result = await authService.resetPassword(req.body.token, req.body.newPassword);
-    res.status(200).json({ success: true, message: result.message });
+    res.status(200).json({ success: true, data: { message: result.message } });
   } catch (error) {
     next(error);
   }

@@ -432,6 +432,23 @@
           "metrics"
         ]
       },
+      "changePasswordSchema": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
       "createAIMatchingModelSchema": {
         "type": "object",
         "properties": {
@@ -958,6 +975,23 @@
           "MOTIVATION_LETTER"
         ]
       },
+      "downloadDocumentParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "docId": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id",
+          "docId"
+        ]
+      },
       "evaluationMetricTypeEnum": {
         "type": "string",
         "enum": [
@@ -1277,6 +1311,50 @@
         "required": [
           "code"
         ]
+      },
+      "myApplicationsQuerySchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "UNDER_REVIEW",
+              "SHORTLISTED",
+              "REJECTED",
+              "ACCEPTED",
+              "WITHDRAWN"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "submittedAt",
+              "status",
+              "createdAt"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
       },
       "notificationParamsSchema": {
         "type": "object",

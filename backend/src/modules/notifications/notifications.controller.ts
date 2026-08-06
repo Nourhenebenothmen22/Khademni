@@ -12,7 +12,7 @@ export async function getNotificationsController(
       req.user!.userId,
       req.query as any,
     );
-    res.status(200).json({ success: true, data: result });
+    res.status(200).json({ success: true, data: result.items, meta: result.pagination });
   } catch (error) {
     next(error);
   }
@@ -72,7 +72,7 @@ export async function deleteNotificationController(
       id,
       req.user!.userId,
     );
-    res.status(200).json({ success: true, message: result.message });
+    res.status(200).json({ success: true, data: { message: result.message } });
   } catch (error) {
     next(error);
   }

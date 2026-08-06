@@ -1,5 +1,7 @@
+import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
+import { logAuditAction } from "../../lib/audit.js";
 import {
   getCache,
   setCache,
@@ -16,6 +18,7 @@ import type { JobStatus } from "../../generated/prisma/client.js";
 export async function createJobPost(
   createdById: string,
   input: CreateJobPostInput,
+  organizationId: string,
 ) {
   const status: JobStatus = (input.status as JobStatus) || "DRAFT";
   const publishedAt = status === "PUBLISHED" ? new Date() : null;
@@ -29,7 +32,7 @@ export async function createJobPost(
       deadline: input.deadline,
       publishedAt,
       createdById,
-      organizationId: (input as any).organizationId ?? undefined,
+      organizationId,
     },
     include: {
       keywords: true,
@@ -38,6 +41,16 @@ export async function createJobPost(
   });
 
   await invalidateJobCache();
+
+  logAuditAction({
+    userId: createdById,
+    organizationId,
+    action: "JOB_POST_CREATED",
+    entityType: "JobPost",
+    entityId: jobPost.id,
+    metadata: { title: jobPost.title, status: jobPost.status },
+  });
+
   return jobPost;
 }
 
@@ -57,7 +70,7 @@ export async function getJobPosts(query: JobPostQuery) {
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const whereClause: Record<string, unknown> = {};
+  const whereClause: Prisma.JobPostWhereInput = {};
 
   if (query.status) {
     whereClause.status = query.status;
@@ -105,7 +118,7 @@ export async function getJobPosts(query: JobPostQuery) {
   };
 
   if (isDefaultPublishedList) {
-    await setCache(PUBLISHED_JOBS_CACHE_KEY, result, 3600); // 1-hour TTL
+    await setCache(PUBLISHED_JOBS_CACHE_KEY, result, 3600);
   }
 
   return result;
@@ -138,24 +151,28 @@ export async function getJobPostById(id: string) {
     throw new AppError("Job post not found.", 404);
   }
 
-  await setCache(cacheKey, jobPost, 3600); // 1-hour TTL
+  await setCache(cacheKey, jobPost, 3600);
   return jobPost;
 }
 
-export async function updateJobPost(id: string, input: UpdateJobPostInput) {
-  const existingJob = await prisma.jobPost.findUnique({ where: { id } });
+export async function updateJobPost(
+  id: string,
+  input: UpdateJobPostInput,
+  organizationId: string,
+) {
+  const existingJob = await prisma.jobPost.findFirst({
+    where: { id, organizationId },
+  });
 
   if (!existingJob) {
-    throw new AppError("Job post not found.", 404);
+    throw new AppError("Job post not found or access denied.", 404);
   }
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: Prisma.JobPostUpdateInput = {};
 
   if (input.title !== undefined) updateData.title = input.title;
-  if (input.description !== undefined)
-    updateData.description = input.description;
-  if (input.requirements !== undefined)
-    updateData.requirements = input.requirements;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.requirements !== undefined) updateData.requirements = input.requirements;
   if (input.deadline !== undefined) updateData.deadline = input.deadline;
 
   if (input.status !== undefined && input.status !== existingJob.status) {
@@ -179,5 +196,42 @@ export async function updateJobPost(id: string, input: UpdateJobPostInput) {
   });
 
   await invalidateJobCache(id);
+
+  logAuditAction({
+    userId: existingJob.createdById,
+    organizationId,
+    action: "JOB_POST_UPDATED",
+    entityType: "JobPost",
+    entityId: id,
+    metadata: { updatedFields: Object.keys(input) },
+  });
+
   return updatedJob;
+}
+
+export async function deleteJobPost(id: string, organizationId: string) {
+  const existingJob = await prisma.jobPost.findFirst({
+    where: { id, organizationId },
+  });
+
+  if (!existingJob) {
+    throw new AppError("Job post not found or access denied.", 404);
+  }
+
+  await prisma.jobPost.delete({
+    where: { id },
+  });
+
+  await invalidateJobCache(id);
+
+  logAuditAction({
+    userId: existingJob.createdById,
+    organizationId,
+    action: "JOB_POST_DELETED",
+    entityType: "JobPost",
+    entityId: id,
+    metadata: { title: existingJob.title },
+  });
+
+  return { message: "Job post deleted successfully." };
 }
