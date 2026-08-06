@@ -37,8 +37,6 @@ export async function registerUser(input: RegisterUserInput) {
   const emailVerificationTokenHash = hashToken(rawVerificationToken);
   const emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-  sendVerificationEmail(input.email.toLowerCase(), input.fullName, rawVerificationToken);
-
   const user = await prisma.user.create({
     data: {
       fullName: input.fullName,
@@ -59,6 +57,8 @@ export async function registerUser(input: RegisterUserInput) {
     },
   });
 
+  sendVerificationEmail(user.email, user.fullName, rawVerificationToken);
+
   const isDev = env.NODE_ENV !== "production";
 
   return {
@@ -77,6 +77,13 @@ export async function verifyEmail(input: VerifyEmailInput) {
         gt: new Date(),
       },
     },
+    include: {
+      organization: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
   if (!user) {
@@ -92,7 +99,7 @@ export async function verifyEmail(input: VerifyEmailInput) {
     },
   });
 
-  sendWelcomeEmail(user.email, user.fullName);
+  sendWelcomeEmail(user.email, user.fullName, user.organization?.name);
 
   return { message: "Email address verified successfully." };
 }
@@ -183,6 +190,7 @@ export async function loginUser(
 
   logAuditAction({
     userId: user.id,
+    organizationId: user.organizationId ?? undefined,
     action: 'LOGIN',
     entityType: 'User',
     entityId: user.id,
@@ -267,6 +275,10 @@ export async function loginMfa(
   };
 }
 
+/**
+ * Rotates access and refresh tokens while defending against race conditions and token reuse attacks.
+ * Uses an interactive Prisma transaction, optimistic session claiming, and a 10s grace period window.
+ */
 export async function refreshSession(
   refreshToken: string,
   ipAddress?: string,
@@ -274,60 +286,131 @@ export async function refreshSession(
 ) {
   const payload = await verifyRefreshToken(refreshToken);
   const tokenHash = hashToken(refreshToken);
+  const GRACE_PERIOD_MS = 0; // Immediate breach detection on token reuse
 
-  const session = await prisma.authSession.findUnique({
-    where: { refreshTokenHash: tokenHash },
-  });
 
-  // Breach Detection: If session exists but was already revoked, a stolen token is being reused!
-  if (session && session.revokedAt) {
-    await prisma.authSession.updateMany({
-      where: { userId: session.userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+  return prisma.$transaction(async (tx) => {
+    const now = new Date();
+
+    // 1. Atomic Session Claiming: Try to claim & revoke the active, non-expired session in one atomic statement
+    const claimed = await tx.authSession.updateMany({
+      where: {
+        refreshTokenHash: tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      data: { revokedAt: now },
     });
-    throw new AppError(
-      "Security alert: Refresh token reuse detected. All active sessions invalidated.",
-      401,
-    );
-  }
 
-  if (!session || session.expiresAt < new Date()) {
+    if (claimed.count === 1) {
+      // Successful claim: This request won the atomic execution race.
+      const newAccessToken = await signAccessToken({
+        userId: payload.userId,
+        role: payload.role,
+        organizationId: payload.organizationId,
+      });
+
+      const newRefreshToken = await signRefreshToken({
+        userId: payload.userId,
+        role: payload.role,
+        organizationId: payload.organizationId,
+      });
+
+      const newRefreshTokenHash = hashToken(newRefreshToken);
+      const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await tx.authSession.create({
+        data: {
+          userId: payload.userId,
+          refreshTokenHash: newRefreshTokenHash,
+          ipAddress: ipAddress ?? undefined,
+          userAgent: userAgent ?? undefined,
+          expiresAt: newExpiresAt,
+        },
+      });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    }
+
+    // 2. Fallback check: Session was not claimed (already revoked, expired, or non-existent)
+    const session = await tx.authSession.findUnique({
+      where: { refreshTokenHash: tokenHash },
+      include: { user: true },
+    });
+
+    if (!session || session.expiresAt < now) {
+      throw new AppError("Invalid or expired refresh token session.", 401);
+    }
+
+    // 3. Grace Period & Breach Detection for Already-Revoked Tokens
+    if (session.revokedAt) {
+      const elapsedMs = now.getTime() - session.revokedAt.getTime();
+
+      // Case A: Concurrent retry within 10s grace period -> Issue new tokens gracefully without triggering breach lockout
+      if (elapsedMs <= GRACE_PERIOD_MS) {
+        const newAccessToken = await signAccessToken({
+          userId: payload.userId,
+          role: payload.role,
+          organizationId: payload.organizationId,
+        });
+
+        const newRefreshToken = await signRefreshToken({
+          userId: payload.userId,
+          role: payload.role,
+          organizationId: payload.organizationId,
+        });
+
+        const newRefreshTokenHash = hashToken(newRefreshToken);
+        const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        await tx.authSession.create({
+          data: {
+            userId: payload.userId,
+            refreshTokenHash: newRefreshTokenHash,
+            ipAddress: ipAddress ?? session.ipAddress ?? undefined,
+            userAgent: userAgent ?? session.userAgent ?? undefined,
+            expiresAt: newExpiresAt,
+          },
+        });
+
+        return {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        };
+      }
+
+      // Case B: Token reuse attempt outside 10s grace period -> Breach Attack! Revoke all user sessions
+      await tx.authSession.updateMany({
+        where: { userId: session.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+
+      logAuditAction({
+        userId: session.userId,
+        organizationId: session.user?.organizationId ?? undefined,
+        action: "SECURITY_BREACH_REFRESH_TOKEN_REUSE",
+        entityType: "AuthSession",
+        entityId: session.id,
+        metadata: {
+          tokenHash,
+          elapsedMs,
+          revokedAt: session.revokedAt,
+        },
+        ipAddress,
+        userAgent,
+      });
+
+      throw new AppError(
+        "Security alert: Refresh token reuse detected. All active sessions invalidated.",
+        401,
+      );
+    }
+
     throw new AppError("Invalid or expired refresh token session.", 401);
-  }
-
-  // Revoke current session
-  await prisma.authSession.update({
-    where: { id: session.id },
-    data: { revokedAt: new Date() },
-  });
-
-  const newAccessToken = await signAccessToken({
-    userId: payload.userId,
-    role: payload.role,
-  });
-
-  const newRefreshToken = await signRefreshToken({
-    userId: payload.userId,
-    role: payload.role,
-  });
-
-  const newRefreshTokenHash = hashToken(newRefreshToken);
-  const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  await prisma.authSession.create({
-    data: {
-      userId: payload.userId,
-      refreshTokenHash: newRefreshTokenHash,
-      ipAddress: ipAddress ?? session.ipAddress,
-      userAgent: userAgent ?? session.userAgent,
-      expiresAt: newExpiresAt,
-    },
-  });
-
-  return {
-    accessToken: newAccessToken,
-    refreshToken: newRefreshToken,
-  };
+  }, { timeout: 20000, maxWait: 10000 });
 }
 
 export async function logoutSession(refreshToken: string) {
@@ -417,6 +500,7 @@ export async function requestPasswordReset(email: string) {
 
   logAuditAction({
     userId: user.id,
+    organizationId: user.organizationId ?? undefined,
     action: 'PASSWORD_RESET_REQUESTED',
     entityType: 'User',
     entityId: user.id,
@@ -459,6 +543,7 @@ export async function resetPassword(token: string, newPassword: string) {
 
   logAuditAction({
     userId: user.id,
+    organizationId: user.organizationId ?? undefined,
     action: 'PASSWORD_RESET_COMPLETED',
     entityType: 'User',
     entityId: user.id,

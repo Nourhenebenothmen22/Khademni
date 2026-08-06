@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { env } from "../config/env.js";
 import { logger } from "./logger.js";
+import { AppError } from "../common/errors/app-error.js";
 
 let transporter: Transporter | null = null;
 
@@ -37,6 +38,9 @@ async function sendEmail(options: EmailOptions): Promise<void> {
   const from = env.SMTP_FROM;
 
   if (!transport) {
+    if (env.NODE_ENV === "production") {
+      throw new AppError("SMTP transport is required in production environment.", 500);
+    }
     logger.info(
       { to: options.to, subject: options.subject },
       "Email (dev log — SMTP not configured)",
@@ -62,6 +66,64 @@ async function sendEmail(options: EmailOptions): Promise<void> {
   }
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderEmailLayout(title: string, contentHtml: string, subtitle?: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 32px 16px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+              <!-- Top Accent Bar (Light Blue) -->
+              <tr>
+                <td style="background-color: #3b82f6; height: 4px; font-size: 0; line-height: 0;">&nbsp;</td>
+              </tr>
+              <!-- Header -->
+              <tr>
+                <td style="padding: 28px 32px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <h1 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">
+                    ${title}
+                  </h1>
+                  ${subtitle ? `<p style="margin: 4px 0 0; color: #64748b; font-size: 13px; font-weight: 500;">${subtitle}</p>` : ""}
+                </td>
+              </tr>
+              <!-- Body -->
+              <tr>
+                <td style="padding: 28px 32px; font-size: 15px; line-height: 1.6; color: #334155;">
+                  ${contentHtml}
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                  <p style="margin: 0 0 4px; font-weight: 600; color: #64748b;">Khademni Recruitment</p>
+                  <p style="margin: 0;">Automated email. Please do not reply directly to this message.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
 // ────────────────────────────────────────────────────────────────
 // Email Templates
 // ────────────────────────────────────────────────────────────────
@@ -70,21 +132,28 @@ export async function sendVerificationEmail(
   to: string,
   fullName: string,
   token: string,
+  organizationName?: string,
 ): Promise<void> {
   const verifyUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
+  const safeFullName = escapeHtml(fullName);
+  const safeOrgName = organizationName ? escapeHtml(organizationName) : undefined;
+  const headerSubtitle = safeOrgName ? `${safeOrgName} Portal` : "Account Verification";
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>Please verify your email address to activate your account and access the recruitment portal:</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${verifyUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">Verify Email Address</a>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">Link expires in 24 hours. Or copy this URL: <br><a href="${verifyUrl}" style="color: #3b82f6; word-break: break-all;">${verifyUrl}</a></p>
+  `;
+
   await sendEmail({
     to,
-    subject: "Verify your email — Intelligent Teacher Recruitment Platform",
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#1a73e8;">Email Verification</h2>
-        <p>Hello <strong>${fullName}</strong>,</p>
-        <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
-        <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;margin:16px 0;">Verify Email</a>
-        <p style="color:#666;font-size:14px;">Or copy this link: <code>${verifyUrl}</code></p>
-        <p style="color:#666;font-size:12px;">This link expires in 24 hours.</p>
-      </div>
-    `,
+    subject: safeOrgName
+      ? `Verify your email — ${safeOrgName}`
+      : "Verify your email — Intelligent Teacher Recruitment Platform",
+    html: renderEmailLayout("Email Verification", content, headerSubtitle),
   });
 }
 
@@ -94,38 +163,48 @@ export async function sendPasswordResetEmail(
   token: string,
 ): Promise<void> {
   const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+  const safeFullName = escapeHtml(fullName);
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>We received a request to reset your password. Click below to set a new password:</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${resetUrl}" style="display: inline-block; background-color: #3b82f6; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">Reset Password</a>
+    </div>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">Link expires in 1 hour. If you didn't request this, you can ignore this email. <br><a href="${resetUrl}" style="color: #3b82f6; word-break: break-all;">${resetUrl}</a></p>
+  `;
+
   await sendEmail({
     to,
     subject: "Password Reset — Intelligent Teacher Recruitment Platform",
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#1a73e8;">Password Reset</h2>
-        <p>Hello <strong>${fullName}</strong>,</p>
-        <p>We received a request to reset your password. Click the button below to proceed:</p>
-        <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#e8471a;color:#fff;text-decoration:none;border-radius:4px;margin:16px 0;">Reset Password</a>
-        <p style="color:#666;font-size:14px;">Or copy this link: <code>${resetUrl}</code></p>
-        <p style="color:#666;font-size:12px;">This link expires in 1 hour. If you did not request this, please ignore this email.</p>
-      </div>
-    `,
+    html: renderEmailLayout("Password Reset", content, "Account Security"),
   });
 }
 
 export async function sendWelcomeEmail(
   to: string,
   fullName: string,
+  organizationName?: string,
 ): Promise<void> {
+  const safeFullName = escapeHtml(fullName);
+  const safeOrgName = organizationName ? escapeHtml(organizationName) : undefined;
+  const headerSubtitle = safeOrgName ? `Welcome to ${safeOrgName}` : "Account Activated";
+  const orgMsg = safeOrgName ? ` to <strong>${safeOrgName}</strong>'s recruitment portal` : "";
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>Your email has been verified successfully. Welcome${orgMsg}! You can now sign in and start exploring job opportunities or managing your recruitment workflow.</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${env.FRONTEND_URL}/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">Sign In to Dashboard</a>
+    </div>
+  `;
+
   await sendEmail({
     to,
-    subject:
-      "Welcome to the Intelligent Teacher Recruitment Platform!",
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#1a73e8;">Welcome!</h2>
-        <p>Hello <strong>${fullName}</strong>,</p>
-        <p>Your email has been verified successfully. You can now sign in and start exploring job opportunities or managing your recruitment workflow.</p>
-        <a href="${env.FRONTEND_URL}/login" style="display:inline-block;padding:12px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;margin:16px 0;">Sign In</a>
-      </div>
-    `,
+    subject: safeOrgName
+      ? `Welcome to ${safeOrgName}!`
+      : "Welcome to the Intelligent Teacher Recruitment Platform!",
+    html: renderEmailLayout("Welcome!", content, headerSubtitle),
   });
 }
 
@@ -135,6 +214,7 @@ export async function sendApplicationStatusEmail(
   trackingCode: string,
   jobTitle: string,
   newStatus: string,
+  organizationName?: string,
   reason?: string,
 ): Promise<void> {
   const statusLabels: Record<string, string> = {
@@ -145,20 +225,69 @@ export async function sendApplicationStatusEmail(
     WITHDRAWN: "Withdrawn",
   };
 
+  const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+    ACCEPTED: { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
+    SHORTLISTED: { bg: "#eff6ff", text: "#1e40af", border: "#bfdbfe" },
+    UNDER_REVIEW: { bg: "#fffbeb", text: "#92400e", border: "#fde68a" },
+    REJECTED: { bg: "#fff1f2", text: "#9f1239", border: "#fecdd3" },
+    WITHDRAWN: { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" },
+  };
+
   const label = statusLabels[newStatus] || newStatus;
+  const badgeStyle = statusColors[newStatus] || { bg: "#f8fafc", text: "#334155", border: "#e2e8f0" };
+
+  const safeFullName = escapeHtml(fullName);
+  const safeTracking = escapeHtml(trackingCode);
+  const safeTitle = escapeHtml(jobTitle);
+  const safeOrgName = organizationName ? escapeHtml(organizationName) : undefined;
+  const safeReason = reason ? escapeHtml(reason) : undefined;
+
+  const orgSuffix = safeOrgName ? ` (${safeOrgName})` : "";
+  const headerSubtitle = safeOrgName ? safeOrgName : "Candidate Update";
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>Your application <strong>${safeTracking}</strong> for the position <strong>"${safeTitle}"</strong> has been updated:</p>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${safeOrgName ? `
+        <tr>
+          <td style="padding-bottom: 8px; color: #64748b; font-size: 13px;">Institution:</td>
+          <td style="padding-bottom: 8px; color: #0f172a; font-size: 14px; font-weight: 600; text-align: right;">${safeOrgName}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding-bottom: 8px; color: #64748b; font-size: 13px;">Tracking Code:</td>
+          <td style="padding-bottom: 8px; color: #0f172a; font-size: 13px; font-family: monospace; text-align: right;">${safeTracking}</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; font-size: 13px;">Status:</td>
+          <td style="text-align: right;">
+            <span style="display: inline-block; background-color: ${badgeStyle.bg}; color: ${badgeStyle.text}; border: 1px solid ${badgeStyle.border}; font-weight: 600; padding: 4px 12px; border-radius: 12px; font-size: 13px;">
+              ${label}
+            </span>
+          </td>
+        </tr>
+      </table>
+      ${safeReason ? `
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; color: #475569; font-size: 13px;">
+          <strong>Reason:</strong> ${safeReason}
+        </div>
+      ` : ""}
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="${env.FRONTEND_URL}/applications" style="display: inline-block; background-color: #3b82f6; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">View Application Details</a>
+    </div>
+  `;
 
   await sendEmail({
     to,
-    subject: `Application Update: ${label} — ${jobTitle}`,
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#1a73e8;">Application Status Update</h2>
-        <p>Hello <strong>${fullName}</strong>,</p>
-        <p>Your application <strong>${trackingCode}</strong> for the position <strong>"${jobTitle}"</strong> has been updated:</p>
-        <p style="font-size:18px;font-weight:bold;color:#333;padding:8px 16px;background:#f1f3f4;border-radius:4px;display:inline-block;">${label}</p>
-        ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
-        <p style="color:#666;font-size:14px;">Log in to your account to view full details.</p>
-      </div>
-    `,
+    subject: `Application Update: ${label} — ${safeTitle}${orgSuffix}`,
+    html: renderEmailLayout("Application Status Update", content, headerSubtitle),
   });
 }
+
+
+
+

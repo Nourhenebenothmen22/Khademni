@@ -1,9 +1,10 @@
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import { nanoid } from "nanoid";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
-import { saveFile } from "../../lib/file-storage.js";
+import { saveFile, getFileStream, deleteFile } from "../../lib/file-storage.js";
 import { sendApplicationStatusEmail } from "../../lib/email.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { logAuditAction } from "../../lib/audit.js";
@@ -11,6 +12,7 @@ import { isValidTransition } from "./status-machine.js";
 import type {
   UpdateApplicationStatusInput,
   ApplicationQuery,
+  MyApplicationsQuery,
 } from "../../common/validators/application.validators.js";
 import type { ApplicationStatus } from "../../generated/prisma/client.js";
 
@@ -52,7 +54,6 @@ export async function applyToJob(
     );
   }
 
-  // Support both disk-streamed file path and memory buffer
   let fileBuffer: Buffer;
   if (file.buffer) {
     fileBuffer = file.buffer;
@@ -62,140 +63,113 @@ export async function applyToJob(
     throw new AppError("Invalid document file input.", 400);
   }
 
-  // Calculate SHA256 checksum for document deduplication & integrity audit
   const sha256 = crypto.createHash("sha256").update(fileBuffer).digest("hex");
   const trackingCode = `APP-${nanoid(8).toUpperCase()}`;
-
   const storedName = `${Date.now()}-${nanoid(6)}_${file.originalname}`;
   const storageKey = `cvs/${candidateId}/${storedName}`;
 
-  // Persist file buffer to local disk storage
   await saveFile(fileBuffer, storageKey);
 
-  // Clean up temporary disk upload file asynchronously if path was used
   if (file.path) {
     fs.unlink(file.path).catch(() => {});
   }
 
-  // Execute database transaction for Application + Document insertion
-  const application = await prisma.$transaction(async (tx) => {
-    const newApp = await tx.application.create({
-      data: {
-        candidateId,
-        jobPostId,
-        motivationLetter,
-        status: "SUBMITTED",
-        trackingCode,
-      },
+  try {
+    const application = await prisma.$transaction(async (tx) => {
+      const newApp = await tx.application.create({
+        data: {
+          candidateId,
+          jobPostId,
+          motivationLetter,
+          status: "SUBMITTED",
+          trackingCode,
+        },
+      });
+
+      await tx.applicationDocument.create({
+        data: {
+          applicationId: newApp.id,
+          type: "CV",
+          status: "UPLOADED",
+          originalName: file.originalname,
+          storedName,
+          storageKey,
+          mimeType: file.mimetype,
+          extension: file.originalname.split(".").pop() || "pdf",
+          sizeBytes: file.size,
+          sha256,
+        },
+      });
+
+      return tx.application.findUnique({
+        where: { id: newApp.id },
+        include: { documents: true },
+      });
+    }, { timeout: 20000, maxWait: 10000 });
+
+    logAuditAction({
+      userId: candidateId,
+      organizationId: jobPost.organizationId ?? undefined,
+      action: "APPLICATION_SUBMITTED",
+      entityType: "Application",
+      entityId: application!.id,
+      metadata: { trackingCode, jobPostId },
     });
 
-    const doc = await tx.applicationDocument.create({
-      data: {
-        applicationId: newApp.id,
-        type: "CV",
-        status: "UPLOADED",
-        originalName: file.originalname,
-        storedName,
-        storageKey,
-        mimeType: file.mimetype,
-        extension: file.originalname.split(".").pop() || "",
-        sizeBytes: file.size,
-        sha256,
-      },
-    });
+    return application!;
 
-    return {
-      ...newApp,
-      documents: [doc],
-    };
-  });
-
-  logAuditAction({
-    userId: candidateId,
-    action: "APPLICATION_SUBMITTED",
-    entityType: "Application",
-    entityId: application.id,
-    metadata: { jobPostId, trackingCode },
-  });
-
-  return application;
+  } catch (error) {
+    await deleteFile(storageKey).catch(() => {});
+    throw error;
+  }
 }
 
-export async function getCandidateApplications(candidateId: string) {
-  const applications = await prisma.application.findMany({
-    where: { candidateId },
-    include: {
-      jobPost: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          deadline: true,
-        },
-      },
-      documents: {
-        select: {
-          id: true,
-          type: true,
-          status: true,
-          originalName: true,
-          sizeBytes: true,
-          uploadedAt: true,
-        },
-      },
-      score: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return applications;
-}
-
-export async function getApplicationDocumentDownload(
+export async function getDownloadStream(
   applicationId: string,
   docId: string,
-  requestingUserId: string,
-  requestingRole: string,
+  userId: string,
+  role: string,
+  organizationId?: string,
 ) {
-  const application = await prisma.application.findUnique({
-    where: { id: applicationId },
+  if (role === "ADMIN" && !organizationId) {
+    throw new AppError("Organization context is required for admin access.", 403);
+  }
+
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      ...(role === "ADMIN" ? { jobPost: { organizationId } } : {}),
+      ...(role === "CANDIDATE" ? { candidateId: userId } : {}),
+    },
   });
 
   if (!application) {
-    throw new AppError("Application not found.", 404);
+    throw new AppError("Application not found or access denied.", 404);
   }
 
-  if (
-    requestingRole !== "ADMIN" &&
-    application.candidateId !== requestingUserId
-  ) {
-    throw new AppError(
-      "Forbidden. You do not have permission to access this document.",
-      403,
-    );
-  }
-
-  const document = await prisma.applicationDocument.findFirst({
-    where: {
-      id: docId,
-      applicationId,
-    },
+  const doc = await prisma.applicationDocument.findFirst({
+    where: { id: docId, applicationId },
   });
 
-  if (!document) {
+  if (!doc) {
     throw new AppError("Document not found.", 404);
   }
 
-  return document;
+  const stream = getFileStream(doc.storageKey);
+  return { stream, document: doc };
 }
 
 export async function updateApplicationStatus(
   applicationId: string,
   changedById: string,
   input: UpdateApplicationStatusInput,
+  organizationId: string,
 ) {
-  const application = await prisma.application.findUnique({
-    where: { id: applicationId },
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      jobPost: { organizationId },
+    },
     include: {
       candidate: { select: { id: true, fullName: true, email: true } },
       jobPost: { select: { id: true, title: true } },
@@ -203,7 +177,7 @@ export async function updateApplicationStatus(
   });
 
   if (!application) {
-    throw new AppError("Application not found.", 404);
+    throw new AppError("Application not found or access denied.", 404);
   }
 
   const oldStatus = application.status;
@@ -213,7 +187,6 @@ export async function updateApplicationStatus(
     return application;
   }
 
-  // Validate state machine status transition
   if (!isValidTransition(oldStatus, newStatus)) {
     throw new AppError(
       `Invalid status transition from ${oldStatus} to ${newStatus}.`,
@@ -221,8 +194,8 @@ export async function updateApplicationStatus(
     );
   }
 
-  const updatedApplication = await prisma.$transaction(async (tx) => {
-    const updated = await tx.application.update({
+  const [updatedApplication] = await prisma.$transaction([
+    prisma.application.update({
       where: { id: applicationId },
       data: { status: newStatus },
       include: {
@@ -237,12 +210,16 @@ export async function updateApplicationStatus(
           select: {
             id: true,
             title: true,
+            organization: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
-    });
-
-    await tx.applicationStatusHistory.create({
+    }),
+    prisma.applicationStatusHistory.create({
       data: {
         applicationId,
         oldStatus,
@@ -250,22 +227,19 @@ export async function updateApplicationStatus(
         changedById,
         reason: input.reason,
       },
-    });
+    }),
+  ]);
 
-    return updated;
-  });
-
-  // Send email notification to candidate (fire-and-forget)
   sendApplicationStatusEmail(
     updatedApplication.candidate.email,
     updatedApplication.candidate.fullName,
     updatedApplication.trackingCode,
     updatedApplication.jobPost.title,
     newStatus,
+    updatedApplication.jobPost.organization?.name,
     input.reason,
   );
 
-  // Send in-app notification
   createNotification({
     userId: updatedApplication.candidate.id,
     title: `Application Update: ${newStatus}`,
@@ -279,9 +253,9 @@ export async function updateApplicationStatus(
     },
   });
 
-  // Log audit action
   logAuditAction({
     userId: changedById,
+    organizationId,
     action: "APPLICATION_STATUS_UPDATED",
     entityType: "Application",
     entityId: applicationId,
@@ -291,12 +265,17 @@ export async function updateApplicationStatus(
   return updatedApplication;
 }
 
-export async function getApplications(query: ApplicationQuery) {
+export async function getApplications(
+  query: ApplicationQuery,
+  organizationId: string,
+) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const whereClause: Record<string, unknown> = {};
+  const whereClause: Prisma.ApplicationWhereInput = {
+    jobPost: { organizationId },
+  };
 
   if (query.status) whereClause.status = query.status;
   if (query.candidateId) whereClause.candidateId = query.candidateId;
@@ -332,3 +311,164 @@ export async function getApplications(query: ApplicationQuery) {
     },
   };
 }
+
+export async function getCandidateApplications(
+  candidateId: string,
+  query: Partial<MyApplicationsQuery> = {},
+) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.ApplicationWhereInput = {
+    candidateId,
+    ...(query.status ? { status: query.status } : {}),
+  };
+
+  const orderBy = {
+    [query.sortBy || "createdAt"]: query.sortOrder || "desc",
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.application.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        jobPost: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
+        documents: true,
+        score: true,
+      },
+    }),
+    prisma.application.count({ where }),
+  ]);
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+export async function withdrawApplication(
+  applicationId: string,
+  userId: string,
+  role: string,
+  organizationId?: string,
+) {
+  if (role === "ADMIN" && !organizationId) {
+    throw new AppError("Organization context is required for admin access.", 403);
+  }
+
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      ...(role === "ADMIN" ? { jobPost: { organizationId } } : {}),
+      ...(role === "CANDIDATE" ? { candidateId: userId } : {}),
+    },
+    include: {
+      candidate: { select: { id: true, fullName: true, email: true } },
+      jobPost: { select: { id: true, title: true, organizationId: true } },
+    },
+  });
+
+  if (!application) {
+    throw new AppError("Application not found or access denied.", 404);
+  }
+
+  const oldStatus = application.status;
+  const newStatus: ApplicationStatus = "WITHDRAWN";
+
+  if (oldStatus === newStatus) {
+    throw new AppError("Application is already withdrawn.", 400);
+  }
+
+  if (!isValidTransition(oldStatus, newStatus)) {
+    throw new AppError(
+      `Cannot withdraw application from current status ${oldStatus}.`,
+      400,
+    );
+  }
+
+  const [updatedApplication] = await prisma.$transaction([
+    prisma.application.update({
+      where: { id: applicationId },
+      data: { status: newStatus },
+      include: {
+        candidate: { select: { id: true, fullName: true, email: true } },
+        jobPost: { select: { id: true, title: true } },
+      },
+    }),
+    prisma.applicationStatusHistory.create({
+      data: {
+        applicationId,
+        oldStatus,
+        newStatus,
+        changedById: userId,
+        reason: "Withdrawn by user",
+      },
+    }),
+  ]);
+
+  logAuditAction({
+    userId,
+    organizationId: application.jobPost.organizationId ?? undefined,
+    action: "APPLICATION_WITHDRAWN",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { oldStatus, newStatus },
+  });
+
+  return updatedApplication;
+}
+
+export async function deleteApplication(
+  applicationId: string,
+  organizationId: string,
+  userId: string,
+) {
+  const application = await prisma.application.findFirst({
+    where: {
+      id: applicationId,
+      jobPost: { organizationId },
+    },
+    include: {
+      documents: true,
+    },
+  });
+
+  if (!application) {
+    throw new AppError("Application not found or access denied.", 404);
+  }
+
+  for (const doc of application.documents) {
+    await deleteFile(doc.storageKey).catch(() => {});
+  }
+
+  await prisma.application.delete({
+    where: { id: applicationId },
+  });
+
+  logAuditAction({
+    userId,
+    organizationId,
+    action: "APPLICATION_DELETED",
+    entityType: "Application",
+    entityId: applicationId,
+    metadata: { trackingCode: application.trackingCode, jobPostId: application.jobPostId },
+  });
+
+  return { message: "Application deleted successfully." };
+}
+
