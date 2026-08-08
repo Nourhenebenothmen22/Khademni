@@ -307,34 +307,7 @@ export default function ProfileSettingsPage() {
 
               <div className="flex items-center justify-between text-xs font-semibold py-1">
                 <span className="text-slate-600">MFA Status</span>
-                <span className="font-extrabold text-rose-600">
-                  {user?.mfaEnabled ? "Enabled" : "Disabled"}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Adds an extra layer of security to your candidate account requiring a 6-digit code from Google Authenticator or Authy.
-              </p>
-
-              <Link
-                href="/settings/mfa"
-                className="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-[#edf0fc] hover:bg-[#e2e6fa] border border-[#d8ddf8] text-[#282276] text-xs font-extrabold py-2.5 px-4 transition-colors text-center"
-              >
-                <span>Configure Two-Factor Auth</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            {/* Account Overview Card 1 */}
-            <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
-              <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                <Circle className="h-3.5 w-3.5 text-slate-400" />
-                <span>Account Overview</span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-600">MFA Status</span>
-                <span className="font-extrabold text-rose-600">
+                <span className={`font-extrabold ${user?.mfaEnabled ? "text-emerald-600" : "text-rose-600"}`}>
                   {user?.mfaEnabled ? "Enabled" : "Disabled"}
                 </span>
               </div>
