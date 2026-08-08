@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../common/errors/app-error.js";
 import {
   getCache,
