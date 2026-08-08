@@ -28,6 +28,15 @@ export interface ResetPasswordRequestPayload {
 export interface ResetPasswordPayload {
   token: string;
   password?: string;
+  newPassword?: string;
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<ApiResponse<{ message: string }>> {
+  const newPassword = payload.newPassword || payload.password;
+  return apiRequest<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: payload.token, newPassword }),
+  });
 }
 
 export interface AuthSuccessData {
@@ -95,13 +104,6 @@ export async function verifyEmail(token: string): Promise<ApiResponse<{ message:
 
 export async function requestPasswordReset(payload: ResetPasswordRequestPayload): Promise<ApiResponse<{ message: string }>> {
   return apiRequest<{ message: string }>("/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function resetPassword(payload: ResetPasswordPayload): Promise<ApiResponse<{ message: string }>> {
-  return apiRequest<{ message: string }>("/auth/reset-password", {
     method: "POST",
     body: JSON.stringify(payload),
   });

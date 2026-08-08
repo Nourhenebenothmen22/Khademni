@@ -25,7 +25,7 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
 
     setLoading(true);
     try {
-      const res = await resetPassword({ token, password });
+      const res = await resetPassword({ token, newPassword: password });
       if (res.success) {
         toast.success("Password reset successfully!");
         setSuccess(true);
