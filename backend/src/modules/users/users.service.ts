@@ -8,9 +8,10 @@ import { generateRandomToken, hashToken } from "../../lib/token.js";
 import { sendVerificationEmail } from "../../lib/email.js";
 import { saveFile, getFileStream, deleteFile, fileExists } from "../../lib/file-storage.js";
 import type { UpdateUserInput, ChangePasswordInput } from "../../common/validators/user.validators.js";
+import { env } from "../../config/env.js";
 
 export function getAvatarUrl(userId: string, avatarKey: string | null): string | null {
-  return avatarKey ? `/api/v1/users/${userId}/avatar` : null;
+  return avatarKey ? `${env.APP_URL}/api/v1/users/${userId}/avatar` : null;
 }
 
 export async function getUserProfile(userId: string) {
@@ -41,9 +42,22 @@ export async function getUserProfile(userId: string) {
     throw new AppError("User profile not found.", 404);
   }
 
+  let validAvatarKey = user.avatarKey;
+  if (validAvatarKey) {
+    const exists = await fileExists(validAvatarKey);
+    if (!exists) {
+      validAvatarKey = null;
+      await prisma.user.update({
+        where: { id: userId },
+        data: { avatarKey: null },
+      }).catch(() => {});
+    }
+  }
+
   return {
     ...user,
-    avatarUrl: getAvatarUrl(user.id, user.avatarKey),
+    avatarKey: validAvatarKey,
+    avatarUrl: getAvatarUrl(user.id, validAvatarKey),
   };
 }
 
