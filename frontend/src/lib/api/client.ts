@@ -4,6 +4,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/a
 
 let accessToken: string | null = null;
 let csrfToken: string | null = null;
+let activeOrganizationId: string | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -15,6 +16,14 @@ export function getAccessToken(): string | null {
 
 export function setCsrfToken(token: string | null) {
   csrfToken = token;
+}
+
+export function setActiveOrganizationId(orgId: string | null) {
+  activeOrganizationId = orgId;
+}
+
+export function getActiveOrganizationId(): string | null {
+  return activeOrganizationId;
 }
 
 export async function fetchCsrfToken(): Promise<string> {
@@ -57,6 +66,10 @@ export async function apiRequest<T = unknown>(
 
   if (csrfToken && options.method && options.method !== "GET") {
     headers.set("X-CSRF-Token", csrfToken);
+  }
+
+  if (activeOrganizationId && !headers.has("X-Organization-Id") && !headers.has("X-Tenant-Id")) {
+    headers.set("X-Organization-Id", activeOrganizationId);
   }
 
   try {

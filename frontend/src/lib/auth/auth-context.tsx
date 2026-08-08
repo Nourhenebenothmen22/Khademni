@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, UserRole } from "@/types/backend";
 import { fetchMyProfile } from "@/features/users/api";
-import { fetchCsrfToken, getAccessToken, setAccessToken } from "@/lib/api/client";
+import { fetchCsrfToken, getAccessToken, setAccessToken, setActiveOrganizationId } from "@/lib/api/client";
 import { logoutUser } from "@/features/auth/api";
 
 interface AuthContextType {
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setAuthUser = useCallback((newUser: User | null, token?: string) => {
     if (token) setAccessToken(token);
+    setActiveOrganizationId(newUser?.organizationId || null);
     setUser(newUser);
   }, []);
 
@@ -48,11 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const res = await fetchMyProfile();
       if (res.success && res.data) {
+        setActiveOrganizationId(res.data.organizationId || null);
         setUser(res.data);
       } else {
+        setActiveOrganizationId(null);
         setUser(null);
       }
     } catch {
+      setActiveOrganizationId(null);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -67,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await logoutUser();
+    setActiveOrganizationId(null);
     setUser(null);
     setAccessToken(null);
   }, []);
