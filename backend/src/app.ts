@@ -20,7 +20,6 @@ import { upload } from "./common/middlewares/upload.middleware.js";
 
 import { openApiDocument } from "./config/swagger.js";
 import { prisma } from "./lib/prisma.js";
-import { env } from "./config/env.js";
 
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";

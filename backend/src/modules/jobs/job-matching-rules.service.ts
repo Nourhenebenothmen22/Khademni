@@ -9,7 +9,7 @@ export async function addRule(jobPostId: string, input: CreateJobMatchingRuleInp
   return prisma.jobMatchingRule.create({
     data: {
       ...input,
-      condition: input.condition as any,
+      condition: input.condition as unknown as object,
       jobPostId,
     },
   });
@@ -36,7 +36,7 @@ export async function updateRule(
     where: { id: ruleId },
     data: {
       ...input,
-      condition: input.condition ? (input.condition as any) : undefined,
+      condition: input.condition ? (input.condition as unknown as object) : undefined,
     },
   });
 }

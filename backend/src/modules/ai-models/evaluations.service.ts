@@ -18,7 +18,7 @@ export async function createEvaluation(
       datasetName: input.datasetName,
       evaluationSampleSize: input.evaluationSampleSize,
       averageLatencyMs: input.averageLatencyMs,
-      evaluationDetails: input.evaluationDetails as any,
+      evaluationDetails: input.evaluationDetails as unknown as object,
       evaluatedAt: input.evaluatedAt || new Date(),
     },
   });
@@ -62,7 +62,7 @@ export async function addMetrics(
   await prisma.aIMatchingMetric.createMany({
     data: input.metrics.map((m) => ({
       evaluationId,
-      type: m.type as any,
+      type: m.type,
       value: m.value,
     })),
     skipDuplicates: true,

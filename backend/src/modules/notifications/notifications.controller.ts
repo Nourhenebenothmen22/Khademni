@@ -10,7 +10,7 @@ export async function getNotificationsController(
   try {
     const result = await notificationsService.getUserNotifications(
       req.user!.userId,
-      req.query as any,
+      req.query as unknown as Record<string, unknown>,
     );
     res.status(200).json({ success: true, data: result.items, meta: result.pagination });
   } catch (error) {

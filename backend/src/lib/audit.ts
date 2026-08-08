@@ -25,7 +25,7 @@ export function logAuditAction(input: AuditLogInput): void {
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
-        metadata: input.metadata ? (input.metadata as any) : undefined,
+        metadata: input.metadata ? (input.metadata as unknown as object) : undefined,
         ipAddress: input.ipAddress,
         userAgent: input.userAgent,
       },

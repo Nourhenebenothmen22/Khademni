@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import type {
@@ -137,7 +138,7 @@ export async function getOrganizations(query: OrganizationQuery) {
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.OrganizationWhereInput = {};
   if (query.isActive !== undefined) {
     where.isActive = query.isActive;
   }

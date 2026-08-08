@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "../../common/errors/app-error.js";
 import {
   getCache,
@@ -41,7 +42,7 @@ export async function getModels(query: AIMatchingModelQuery) {
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.AIMatchingModelWhereInput = {};
   if (query.isActive !== undefined) where.isActive = query.isActive;
   if (query.search) {
     where.OR = [
@@ -71,7 +72,7 @@ export async function getModelById(id: string) {
 
 export async function getActiveModel() {
   // Check Redis/memory cache first
-  const cachedModel = await getCache<any>(ACTIVE_AI_MODEL_CACHE_KEY);
+  const cachedModel = await getCache<object>(ACTIVE_AI_MODEL_CACHE_KEY);
   if (cachedModel) {
     return cachedModel;
   }

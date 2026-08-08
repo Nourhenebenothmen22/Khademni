@@ -80,7 +80,7 @@ export async function getApplicationsController(
 ): Promise<void> {
   try {
     const organizationId = getOrganizationId(req);
-    const query = ((req as any).validatedQuery as ApplicationQuery) || (req.query as unknown as ApplicationQuery);
+    const query = (req as unknown as { validatedQuery: ApplicationQuery }).validatedQuery || (req.query as unknown as ApplicationQuery);
     const result = await applicationsService.getApplications(query, organizationId);
 
     res.status(200).json({
@@ -126,7 +126,7 @@ export async function getMyApplicationsController(
 ): Promise<void> {
   try {
     const candidateId = req.user!.userId;
-    const query = ((req as any).validatedQuery as ApplicationQuery) || (req.query as unknown as ApplicationQuery);
+    const query = (req as unknown as { validatedQuery: ApplicationQuery }).validatedQuery || (req.query as unknown as ApplicationQuery);
     const result = await applicationsService.getCandidateApplications(candidateId, query);
 
     res.status(200).json({

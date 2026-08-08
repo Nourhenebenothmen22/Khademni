@@ -1,5 +1,4 @@
 import { logger } from "./logger.js";
-import { env } from "../config/env.js";
 import { redisClient } from "./redis.js";
 
 interface CacheEntry<T> {
@@ -7,7 +6,7 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const memoryCache = new Map<string, CacheEntry<any>>();
+const memoryCache = new Map<string, CacheEntry<unknown>>();
 
 /**
  * Clean up expired in-memory cache keys periodically.

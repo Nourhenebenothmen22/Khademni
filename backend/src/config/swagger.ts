@@ -23,7 +23,7 @@ Object.entries(validators).forEach(([name, schema]) => {
     schema &&
     typeof schema === "object" &&
     schema instanceof z.ZodType &&
-    typeof (schema as any).openapi === "function"
+    typeof (schema as unknown as Record<string, unknown>).openapi === "function"
   ) {
     registry.register(name, schema);
   }

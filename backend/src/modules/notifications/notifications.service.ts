@@ -16,7 +16,7 @@ export async function createNotification(input: CreateNotificationInput) {
     return await prisma.notification.create({
       data: {
         ...input,
-        metadata: input.metadata ? (input.metadata as any) : undefined,
+        metadata: input.metadata ? (input.metadata as unknown as object) : undefined,
       },
     });
   } catch (error) {

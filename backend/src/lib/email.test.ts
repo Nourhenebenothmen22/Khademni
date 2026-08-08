@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 
 const mockSendMail = vi.fn().mockResolvedValue({ messageId: "test-msg-123" });
@@ -14,14 +13,13 @@ vi.mock("nodemailer", () => ({
 
 import {
   sendVerificationEmail,
-  sendPasswordResetEmail,
   sendWelcomeEmail,
   sendApplicationStatusEmail,
 } from "./email.js";
 
 describe("Email Service & Tenant Templates", () => {
   beforeEach(() => {
-    (env as any).SMTP_HOST = "smtp.test.com";
+    (env as unknown as Record<string, string>).SMTP_HOST = "smtp.test.com";
     mockSendMail.mockClear();
   });
 

@@ -62,7 +62,7 @@ export async function getJobPosts(query: JobPostQuery) {
     (!query.page || query.page === 1);
 
   if (isDefaultPublishedList) {
-    const cachedList = await getCache<any>(PUBLISHED_JOBS_CACHE_KEY);
+    const cachedList = await getCache<object>(PUBLISHED_JOBS_CACHE_KEY);
     if (cachedList) return cachedList;
   }
 
@@ -126,7 +126,7 @@ export async function getJobPosts(query: JobPostQuery) {
 
 export async function getJobPostById(id: string) {
   const cacheKey = `jobs:detail:${id}`;
-  const cachedJob = await getCache<any>(cacheKey);
+  const cachedJob = await getCache<object>(cacheKey);
   if (cachedJob) return cachedJob;
 
   const jobPost = await prisma.jobPost.findUnique({

@@ -9,7 +9,7 @@ const windowMs = 15 * 60 * 1000;
 function getStore(prefix: string) {
   if (redisClient) {
     return new RedisStore({
-      // @ts-ignore
+      // @ts-expect-error rateLimit store handler type incompatibility
       sendCommand: (...args: string[]) => redisClient!.call(...args),
       prefix: `rl:${prefix}:`,
     });

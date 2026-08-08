@@ -36,7 +36,7 @@ export async function getJobsController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const query = (req as any).validatedQuery as JobPostQuery || (req.query as unknown as JobPostQuery);
+    const query = (req as unknown as { validatedQuery: JobPostQuery }).validatedQuery || (req.query as unknown as JobPostQuery);
     const result = await jobsService.getJobPosts(query);
     res.status(200).json({
       success: true,
