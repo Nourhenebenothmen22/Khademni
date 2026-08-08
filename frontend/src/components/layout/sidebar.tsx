@@ -53,7 +53,11 @@ export function Sidebar() {
         {/* Top User Card in Sidebar */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs text-center space-y-3">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 border border-slate-200 overflow-hidden shadow-inner">
-            <UserIcon className="h-12 w-12 text-slate-400" />
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+            ) : (
+              <UserIcon className="h-12 w-12 text-slate-400" />
+            )}
           </div>
           <div>
             <div className="flex items-center justify-center gap-1.5 font-bold text-slate-900 text-sm">

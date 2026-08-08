@@ -47,3 +47,18 @@ export async function updateOrganization(id: string, payload: Partial<CreateOrga
     body: JSON.stringify(payload),
   });
 }
+
+export async function uploadOrganizationLogo(id: string, file: File): Promise<ApiResponse<Organization>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<Organization>(`/organizations/${id}/logo`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function deleteOrganizationLogo(id: string): Promise<ApiResponse<Organization>> {
+  return apiRequest<Organization>(`/organizations/${id}/logo`, {
+    method: "DELETE",
+  });
+}

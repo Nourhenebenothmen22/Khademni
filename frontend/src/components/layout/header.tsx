@@ -70,9 +70,17 @@ export function Header() {
                   <span className="truncate max-w-[140px] sm:max-w-[180px]">
                     {user?.fullName || "Nourhene ben othmen"}
                   </span>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#282276] text-white font-extrabold text-xs shadow-xs">
-                    {user?.fullName?.charAt(0).toUpperCase() || "N"}
-                  </div>
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName}
+                      className="h-7 w-7 rounded-full object-cover border border-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#282276] text-white font-extrabold text-xs shadow-xs">
+                      {user?.fullName?.charAt(0).toUpperCase() || "N"}
+                    </div>
+                  )}
                   <ChevronDown className={`h-4 w-4 text-slate-400 mr-1 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
                 </button>
 

@@ -30,6 +30,7 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
   isEmailVerified: boolean;
   mfaEnabled: boolean;
   isActive: boolean;
@@ -42,6 +43,7 @@ export interface Organization {
   name: string;
   slug: string;
   domain: string | null;
+  logoUrl?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

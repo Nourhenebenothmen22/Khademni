@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { updateMyProfile, changePassword } from "@/features/users/api";
+import { updateMyProfile, changePassword, uploadUserAvatar, deleteUserAvatar } from "@/features/users/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,8 @@ import {
   Mail,
   ArrowRight,
   Circle,
+  Upload,
+  Trash2,
 } from "lucide-react";
 
 export default function ProfileSettingsPage() {
@@ -25,7 +27,51 @@ export default function ProfileSettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image file size must be less than 2 MB");
+      return;
+    }
+
+    setAvatarLoading(true);
+    try {
+      const res = await uploadUserAvatar(file);
+      if (res.success) {
+        toast.success("Profile avatar uploaded successfully!");
+        refreshUser();
+      } else {
+        toast.error(res.message || "Failed to upload avatar");
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Avatar upload error");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!confirm("Are you sure you want to remove your profile photo?")) return;
+    setAvatarLoading(true);
+    try {
+      const res = await deleteUserAvatar();
+      if (res.success) {
+        toast.success("Profile avatar removed!");
+        refreshUser();
+      } else {
+        toast.error(res.message || "Failed to remove avatar");
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Avatar removal error");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +143,47 @@ export default function ProfileSettingsPage() {
               </div>
 
               <div className="space-y-4">
+                {/* Avatar Upload Section */}
+                <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e2e3f6] text-[#282276] overflow-hidden border border-slate-200 shrink-0 font-black text-xl">
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      user?.fullName?.charAt(0).toUpperCase() || "U"
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-xs">
+                    <p className="font-bold text-slate-900">Profile Photo</p>
+                    <p className="text-slate-400">JPEG, PNG, or WebP. Max 2MB.</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-300 px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs">
+                        <Upload className="h-3.5 w-3.5 text-[#282276]" />
+                        <span>{avatarLoading ? "Uploading..." : "Upload Photo"}</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleAvatarFileChange}
+                          disabled={avatarLoading}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {user?.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteAvatar}
+                          disabled={avatarLoading}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-extrabold text-rose-700 hover:bg-rose-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
                     FULL NAME <span className="text-[#282276]">* (EDITABLE)</span>

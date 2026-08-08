@@ -31,6 +31,21 @@ export async function updateMyProfile(payload: UpdateProfilePayload): Promise<Ap
   });
 }
 
+export async function uploadUserAvatar(file: File): Promise<ApiResponse<User>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<User>("/users/me/avatar", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function deleteUserAvatar(): Promise<ApiResponse<User>> {
+  return apiRequest<User>("/users/me/avatar", {
+    method: "DELETE",
+  });
+}
+
 export async function changePassword(payload: ChangePasswordPayload): Promise<ApiResponse<{ message: string }>> {
   return apiRequest<{ message: string }>("/users/me/change-password", {
     method: "POST",
