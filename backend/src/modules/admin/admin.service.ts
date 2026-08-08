@@ -194,3 +194,50 @@ export async function getAuditLogs(organizationId: string, query: AuditLogQuery)
 
   return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
+
+export async function createOrgUser(
+  organizationId: string,
+  input: { fullName: string; email: string; password: string; role?: "CANDIDATE" | "ADMIN" },
+  createdById: string,
+) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: input.email.toLowerCase() },
+  });
+
+  if (existingUser) {
+    throw new AppError("A user with this email address already exists.", 409);
+  }
+
+  const { hashPassword } = await import("../../lib/password.js");
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.user.create({
+    data: {
+      fullName: input.fullName,
+      email: input.email.toLowerCase(),
+      passwordHash,
+      role: input.role || "ADMIN",
+      organizationId,
+      isEmailVerified: true,
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      organizationId: true,
+      createdAt: true,
+    },
+  });
+
+  logAuditAction({
+    userId: createdById,
+    organizationId,
+    action: "ADMIN_USER_CREATED",
+    entityType: "User",
+    entityId: user.id,
+    metadata: { role: user.role, email: user.email },
+  });
+
+  return user;
+}

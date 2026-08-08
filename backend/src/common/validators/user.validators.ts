@@ -47,5 +47,17 @@ export const changePasswordSchema = z.object({
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
+export const createOrgUserSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, "Full name must be at least 2 characters")
+    .max(120),
+  email: z.string().email(),
+  password: strongPasswordSchema,
+  role: userRoleEnum.default("ADMIN").optional(),
+});
+
+export type CreateOrgUserInput = z.infer<typeof createOrgUserSchema>;
+
 export type UserQuery = z.infer<typeof userQuerySchema>;
 

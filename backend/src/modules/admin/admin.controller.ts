@@ -89,3 +89,18 @@ export async function getAuditLogsController(
     next(error);
   }
 }
+
+export async function createUserController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const organizationId = getOrganizationId(req);
+    const createdById = req.user!.userId;
+    const user = await adminService.createOrgUser(organizationId, req.body, createdById);
+    res.status(201).json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+}

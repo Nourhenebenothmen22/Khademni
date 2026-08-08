@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
 import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import { validateBody, validateQuery, validateParams } from "../../common/middlewares/validate.middleware.js";
-import { userQuerySchema } from "../../common/validators/user.validators.js";
+import { userQuerySchema, createOrgUserSchema } from "../../common/validators/user.validators.js";
 import { auditLogQuerySchema } from "../../common/validators/audit-log.validators.js";
 import { cuidSchema } from "../../common/validators/shared.validators.js";
 import { z } from "zod";
@@ -15,6 +15,8 @@ router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
 router.get("/stats", adminController.getDashboardStatsController);
 
 router.get("/users", validateQuery(userQuerySchema), adminController.getUsersController);
+
+router.post("/users", validateBody(createOrgUserSchema), adminController.createUserController);
 
 router.get("/users/:id", validateParams(z.object({ id: cuidSchema })), adminController.getUserByIdController);
 
