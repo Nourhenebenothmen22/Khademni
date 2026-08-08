@@ -1,12 +1,19 @@
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "../../lib/prisma.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
+import { saveFile, getFileStream, deleteFile, fileExists } from "../../lib/file-storage.js";
 import type {
   CreateOrganizationInput,
   UpdateOrganizationInput,
   OrganizationQuery,
 } from "../../common/validators/organization.validators.js";
+
+export function getLogoUrl(orgId: string, logoKey: string | null): string | null {
+  return logoKey ? `/api/v1/organizations/${orgId}/logo` : null;
+}
 
 export async function createOrganization(input: CreateOrganizationInput, createdById: string) {
   const existingSlug = await prisma.organization.findUnique({
@@ -43,7 +50,10 @@ export async function createOrganization(input: CreateOrganizationInput, created
     metadata: { name: organization.name, slug: organization.slug },
   });
 
-  return organization;
+  return {
+    ...organization,
+    logoUrl: getLogoUrl(organization.id, organization.logoKey),
+  };
 }
 
 export async function getOrganizationById(id: string) {
@@ -60,7 +70,10 @@ export async function getOrganizationById(id: string) {
     throw new AppError("Organization not found.", 404);
   }
 
-  return organization;
+  return {
+    ...organization,
+    logoUrl: getLogoUrl(organization.id, organization.logoKey),
+  };
 }
 
 export async function getCurrentUserOrganization(organizationId: string) {
@@ -77,7 +90,10 @@ export async function getCurrentUserOrganization(organizationId: string) {
     throw new AppError("Organization not found.", 404);
   }
 
-  return organization;
+  return {
+    ...organization,
+    logoUrl: getLogoUrl(organization.id, organization.logoKey),
+  };
 }
 
 export async function updateOrganization(
@@ -130,7 +146,108 @@ export async function updateOrganization(
     metadata: { changes: input },
   });
 
-  return updated;
+  return {
+    ...updated,
+    logoUrl: getLogoUrl(updated.id, updated.logoKey),
+  };
+}
+
+export async function uploadOrganizationLogo(
+  orgId: string,
+  file: Express.Multer.File | undefined,
+  updatedById: string,
+) {
+  if (!file) {
+    throw new AppError("No image file uploaded.", 400);
+  }
+
+  const existing = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!existing) {
+    throw new AppError("Organization not found.", 404);
+  }
+
+  if (existing.logoKey) {
+    await deleteFile(existing.logoKey).catch(() => {});
+  }
+
+  const ext = path.extname(file.originalname).toLowerCase() || ".png";
+  const storageKey = `avatars/orgs/${orgId}_${Date.now()}${ext}`;
+
+  const fileBuffer = fs.readFileSync(file.path);
+  await saveFile(fileBuffer, storageKey);
+
+  fs.unlink(file.path, () => {});
+
+  const updated = await prisma.organization.update({
+    where: { id: orgId },
+    data: { logoKey: storageKey },
+  });
+
+  logAuditAction({
+    userId: updatedById,
+    organizationId: orgId,
+    action: "ORGANIZATION_LOGO_UPLOADED",
+    entityType: "Organization",
+    entityId: orgId,
+  });
+
+  return {
+    ...updated,
+    logoUrl: getLogoUrl(updated.id, updated.logoKey),
+  };
+}
+
+export async function deleteOrganizationLogo(orgId: string, updatedById: string) {
+  const existing = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!existing) {
+    throw new AppError("Organization not found.", 404);
+  }
+
+  if (existing.logoKey) {
+    await deleteFile(existing.logoKey).catch(() => {});
+  }
+
+  const updated = await prisma.organization.update({
+    where: { id: orgId },
+    data: { logoKey: null },
+  });
+
+  logAuditAction({
+    userId: updatedById,
+    organizationId: orgId,
+    action: "ORGANIZATION_LOGO_DELETED",
+    entityType: "Organization",
+    entityId: orgId,
+  });
+
+  return {
+    ...updated,
+    logoUrl: null,
+  };
+}
+
+export async function getOrganizationLogoStream(orgId: string) {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { id: true, logoKey: true },
+  });
+
+  if (!org || !org.logoKey) {
+    throw new AppError("Organization logo image not found.", 404);
+  }
+
+  const exists = await fileExists(org.logoKey);
+  if (!exists) {
+    throw new AppError("Logo file not found on disk.", 404);
+  }
+
+  const stream = getFileStream(org.logoKey);
+  const ext = path.extname(org.logoKey).toLowerCase();
+  let mimeType = "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+  if (ext === ".webp") mimeType = "image/webp";
+
+  return { stream, mimeType };
 }
 
 export async function getOrganizations(query: OrganizationQuery) {
@@ -165,8 +282,13 @@ export async function getOrganizations(query: OrganizationQuery) {
     }),
   ]);
 
+  const itemsWithLogoUrl = items.map((org) => ({
+    ...org,
+    logoUrl: getLogoUrl(org.id, org.logoKey),
+  }));
+
   return {
-    items,
+    items: itemsWithLogoUrl,
     pagination: {
       page,
       limit,

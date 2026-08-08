@@ -1,4 +1,4 @@
-import type { Response, NextFunction } from "express";
+import type { Response, NextFunction, Request } from "express";
 import type { AuthenticatedRequest } from "../../common/middlewares/auth.middleware.js";
 import type { OrganizationQuery } from "../../common/validators/organization.validators.js";
 import { AppError } from "../../common/errors/app-error.js";
@@ -76,6 +76,60 @@ export async function updateOrganizationController(
       success: true,
       data: updated,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadLogoController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id } = req.params as { id: string };
+    const updatedById = req.user!.userId;
+    const result = await organizationsService.uploadOrganizationLogo(id, req.file, updatedById);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteLogoController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id } = req.params as { id: string };
+    const updatedById = req.user!.userId;
+    const result = await organizationsService.deleteOrganizationLogo(id, updatedById);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getLogoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id } = req.params as { id: string };
+    const { stream, mimeType } = await organizationsService.getOrganizationLogoStream(id);
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    stream.pipe(res);
   } catch (error) {
     next(error);
   }
