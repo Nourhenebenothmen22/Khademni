@@ -95,6 +95,7 @@ async function loadJobState(queueJobId: string): Promise<MatchingJobState | null
 export async function enqueueJobMatching(
   jobPostId: string,
   modelId?: string,
+  organizationId?: string,
 ): Promise<MatchingJobState> {
   const job = await prisma.jobPost.findUnique({
     where: { id: jobPostId },
@@ -105,6 +106,10 @@ export async function enqueueJobMatching(
 
   if (!job) {
     throw new AppError("Job post not found.", 404);
+  }
+
+  if (organizationId && job.organizationId !== organizationId) {
+    throw new AppError("Job post not found or access denied.", 404);
   }
 
   if (env.NODE_ENV === "production" && !env.REDIS_URL) {

@@ -52,7 +52,8 @@ export async function enqueueJobMatchingController(
   try {
     const { jobPostId } = req.params as { jobPostId: string };
     const { modelId } = req.body;
-    const state = await queueService.enqueueJobMatching(jobPostId, modelId);
+    const organizationId = getOrganizationId(req);
+    const state = await queueService.enqueueJobMatching(jobPostId, modelId, organizationId);
     res.status(202).json({ success: true, data: state });
   } catch (error) {
     next(error);
