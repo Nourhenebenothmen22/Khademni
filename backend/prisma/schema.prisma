@@ -85,6 +85,7 @@ model Organization {
   name      String
   slug      String     @unique
   domain    String?    @unique
+  logoKey   String?
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -101,6 +102,7 @@ model User {
   fullName                   String
   email                      String                     @unique
   passwordHash               String
+  avatarKey                  String?
   role                       UserRole                   @default(CANDIDATE)
   isEmailVerified            Boolean                    @default(false)
   emailVerificationTokenHash String?
