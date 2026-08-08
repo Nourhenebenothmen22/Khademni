@@ -48,4 +48,26 @@ describe("requireTenantAccess Middleware", () => {
     expect(error?.statusCode).toBe(403);
     expect(error?.message).toContain("Cross-tenant access is strictly prohibited");
   });
+
+  it("should return 403 Forbidden when user has no organizationId but passes a requestedOrgId", () => {
+    const req = {
+      user: { userId: "candidate-123", role: "CANDIDATE", organizationId: null },
+      params: { organizationId: "org-victim" },
+      query: {},
+      headers: {},
+      originalUrl: "/api/v1/organizations/org-victim",
+      method: "PATCH",
+      ip: "127.0.0.1",
+    } as unknown as AuthenticatedRequest;
+
+    const res = {} as Response;
+    const next = vi.fn() as NextFunction;
+
+    requireTenantAccess(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    const mockNext = next as unknown as { mock: { calls: Array<[{ statusCode: number; message: string }]> } };
+    const error = mockNext.mock.calls[0]?.[0];
+    expect(error?.statusCode).toBe(403);
+  });
 });

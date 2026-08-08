@@ -25,7 +25,7 @@ export const requireTenantAccess = (
     req.headers["x-tenant-id"]
   ) as string | undefined;
 
-  if (requestedOrgId && req.user.organizationId && req.user.organizationId !== requestedOrgId) {
+  if (requestedOrgId && req.user.organizationId !== requestedOrgId) {
     logAuditAction({
       userId: req.user.userId,
       action: "CROSS_TENANT_ACCESS_ATTEMPT",
