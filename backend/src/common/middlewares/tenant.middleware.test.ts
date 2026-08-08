@@ -27,8 +27,8 @@ describe("requireTenantAccess Middleware", () => {
 
     expect(next).toHaveBeenCalled();
     const mockNext = next as unknown as { mock: { calls: Array<[{ statusCode: number; message: string }]> } };
-    const error = mockNext.mock.calls[0][0];
-    expect(error.statusCode).toBe(401);
+    const error = mockNext.mock.calls[0]?.[0];
+    expect(error?.statusCode).toBe(401);
   });
 
   it("should allow request when requested organization matches authenticated user organization", () => {
@@ -44,8 +44,8 @@ describe("requireTenantAccess Middleware", () => {
 
     expect(next).toHaveBeenCalled();
     const mockNext = next as unknown as { mock: { calls: Array<[{ statusCode: number; message: string }]> } };
-    const error = mockNext.mock.calls[0][0];
-    expect(error.statusCode).toBe(403);
-    expect(error.message).toContain("Cross-tenant access is strictly prohibited");
+    const error = mockNext.mock.calls[0]?.[0];
+    expect(error?.statusCode).toBe(403);
+    expect(error?.message).toContain("Cross-tenant access is strictly prohibited");
   });
 });
