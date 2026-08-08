@@ -26,6 +26,21 @@ export function getActiveOrganizationId(): string | null {
   return activeOrganizationId;
 }
 
+export function getApiOrigin(): string {
+  try {
+    const url = new URL(API_BASE_URL);
+    return url.origin;
+  } catch {
+    return "http://localhost:3000";
+  }
+}
+
+export function getAvatarImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${getApiOrigin()}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 export async function fetchCsrfToken(): Promise<string> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/csrf`, {

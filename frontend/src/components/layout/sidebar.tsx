@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { getAvatarImageUrl } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard,
@@ -56,7 +57,7 @@ export function Sidebar() {
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 border border-slate-200 overflow-hidden shadow-inner">
             {user?.avatarUrl && !sidebarAvatarError ? (
               <img
-                src={user.avatarUrl.startsWith("http") ? user.avatarUrl : `http://localhost:3000${user.avatarUrl}`}
+                src={getAvatarImageUrl(user.avatarUrl)!}
                 alt={user.fullName}
                 className="h-full w-full object-cover"
                 onError={() => setSidebarAvatarError(true)}

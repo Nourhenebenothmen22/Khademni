@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
+import { getAvatarImageUrl } from "@/lib/api/client";
 import { fetchUnreadNotificationCount } from "@/features/notifications/api";
 import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles } from "lucide-react";
 
@@ -73,7 +74,7 @@ export function Header() {
                   </span>
                   {user?.avatarUrl && !avatarError ? (
                     <img
-                      src={user.avatarUrl.startsWith("http") ? user.avatarUrl : `http://localhost:3000${user.avatarUrl}`}
+                      src={getAvatarImageUrl(user.avatarUrl)!}
                       alt={user.fullName}
                       className="h-7 w-7 rounded-full object-cover border border-slate-200"
                       onError={() => setAvatarError(true)}
