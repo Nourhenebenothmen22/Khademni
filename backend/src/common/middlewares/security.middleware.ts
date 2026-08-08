@@ -10,7 +10,11 @@ import { env } from "../../config/env.js";
 export const applySecurityMiddleware = (app: Express): void => {
   app.disable("x-powered-by");
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
 
   const allowedOrigins = env.ALLOWED_CORS_ORIGINS;
 
@@ -28,7 +32,7 @@ export const applySecurityMiddleware = (app: Express): void => {
       },
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token", "X-Organization-Id", "X-Tenant-Id"],
       exposedHeaders: ["X-Request-ID", "X-CSRF-Token"],
     }),
   );
