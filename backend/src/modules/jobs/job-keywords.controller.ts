@@ -12,6 +12,7 @@ export async function addKeywordsController(
     const keywords = await jobKeywordsService.addKeywords(
       jobPostId,
       req.body.keywords,
+      req.user?.organizationId ?? undefined,
     );
     res.status(201).json({ success: true, data: keywords });
   } catch (error) {
@@ -26,7 +27,7 @@ export async function getKeywordsController(
 ): Promise<void> {
   try {
     const { jobPostId } = req.params as { jobPostId: string };
-    const keywords = await jobKeywordsService.getKeywords(jobPostId);
+    const keywords = await jobKeywordsService.getKeywords(jobPostId, req.user?.organizationId ?? undefined);
     res.status(200).json({ success: true, data: keywords });
   } catch (error) {
     next(error);
@@ -44,6 +45,7 @@ export async function updateKeywordController(
       jobPostId,
       id,
       req.body,
+      req.user?.organizationId ?? undefined,
     );
     res.status(200).json({ success: true, data: keyword });
   } catch (error) {
@@ -61,6 +63,7 @@ export async function removeKeywordController(
     const result = await jobKeywordsService.removeKeyword(
       jobPostId,
       id,
+      req.user?.organizationId ?? undefined,
     );
     res.status(200).json({ success: true, message: result.message });
   } catch (error) {

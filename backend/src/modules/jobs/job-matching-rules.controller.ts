@@ -9,7 +9,7 @@ export async function addRuleController(
 ): Promise<void> {
   try {
     const { jobPostId } = req.params as { jobPostId: string };
-    const rule = await rulesService.addRule(jobPostId, req.body);
+    const rule = await rulesService.addRule(jobPostId, req.body, req.user?.organizationId ?? undefined);
     res.status(201).json({ success: true, data: rule });
   } catch (error) {
     next(error);
@@ -23,7 +23,7 @@ export async function getRulesController(
 ): Promise<void> {
   try {
     const { jobPostId } = req.params as { jobPostId: string };
-    const rules = await rulesService.getRules(jobPostId);
+    const rules = await rulesService.getRules(jobPostId, req.user?.organizationId ?? undefined);
     res.status(200).json({ success: true, data: rules });
   } catch (error) {
     next(error);
@@ -41,6 +41,7 @@ export async function updateRuleController(
       jobPostId,
       id,
       req.body,
+      req.user?.organizationId ?? undefined,
     );
     res.status(200).json({ success: true, data: rule });
   } catch (error) {
@@ -58,6 +59,7 @@ export async function removeRuleController(
     const result = await rulesService.removeRule(
       jobPostId,
       id,
+      req.user?.organizationId ?? undefined,
     );
     res.status(200).json({ success: true, message: result.message });
   } catch (error) {
