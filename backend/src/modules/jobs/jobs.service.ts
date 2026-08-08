@@ -54,26 +54,26 @@ export async function createJobPost(
   return jobPost;
 }
 
-export async function getJobPosts(query: JobPostQuery) {
-  const isDefaultPublishedList =
-    query.status === "PUBLISHED" &&
-    !query.search &&
-    !query.createdById &&
-    (!query.page || query.page === 1);
-
-  if (isDefaultPublishedList) {
-    const cachedList = await getCache<{ items: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(PUBLISHED_JOBS_CACHE_KEY);
-    if (cachedList) return cachedList;
-  }
-
+export async function getJobPosts(
+  query: JobPostQuery,
+  requesterRole?: string,
+  requesterOrgId?: string,
+) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 10;
   const skip = (page - 1) * limit;
 
   const whereClause: Prisma.JobPostWhereInput = {};
 
-  if (query.status) {
-    whereClause.status = query.status;
+  if (requesterRole === "ADMIN") {
+    if (requesterOrgId) {
+      whereClause.organizationId = requesterOrgId;
+    }
+    if (query.status) {
+      whereClause.status = query.status;
+    }
+  } else {
+    whereClause.status = "PUBLISHED";
   }
 
   if (query.createdById) {
@@ -86,6 +86,17 @@ export async function getJobPosts(query: JobPostQuery) {
       { description: { contains: query.search, mode: "insensitive" } },
       { requirements: { contains: query.search, mode: "insensitive" } },
     ];
+  }
+
+  const isDefaultPublishedList =
+    whereClause.status === "PUBLISHED" &&
+    !query.search &&
+    !query.createdById &&
+    (!query.page || query.page === 1);
+
+  if (isDefaultPublishedList) {
+    const cachedList = await getCache<{ items: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(PUBLISHED_JOBS_CACHE_KEY);
+    if (cachedList) return cachedList;
   }
 
   const [total, items] = await Promise.all([
@@ -124,7 +135,11 @@ export async function getJobPosts(query: JobPostQuery) {
   return result;
 }
 
-export async function getJobPostById(id: string) {
+export async function getJobPostById(
+  id: string,
+  requesterRole?: string,
+  requesterOrgId?: string,
+) {
   const cacheKey = `jobs:detail:${id}`;
   const cachedJob = await getCache<object>(cacheKey);
   if (cachedJob) return cachedJob;
@@ -148,6 +163,14 @@ export async function getJobPostById(id: string) {
   });
 
   if (!jobPost) {
+    throw new AppError("Job post not found.", 404);
+  }
+
+  if (requesterRole === "ADMIN" && requesterOrgId && jobPost.organizationId !== requesterOrgId) {
+    throw new AppError("Job post not found or access denied.", 404);
+  }
+
+  if (requesterRole !== "ADMIN" && jobPost.status !== "PUBLISHED") {
     throw new AppError("Job post not found.", 404);
   }
 

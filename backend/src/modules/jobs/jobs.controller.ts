@@ -37,7 +37,11 @@ export async function getJobsController(
 ): Promise<void> {
   try {
     const query = (req as unknown as { validatedQuery: JobPostQuery }).validatedQuery || (req.query as unknown as JobPostQuery);
-    const result = await jobsService.getJobPosts(query);
+    const result = await jobsService.getJobPosts(
+      query,
+      req.user?.role,
+      req.user?.organizationId ?? undefined,
+    );
     res.status(200).json({
       success: true,
       data: result.items,
@@ -55,7 +59,11 @@ export async function getJobByIdController(
 ): Promise<void> {
   try {
     const { id } = req.params as { id: string };
-    const jobPost = await jobsService.getJobPostById(id);
+    const jobPost = await jobsService.getJobPostById(
+      id,
+      req.user?.role,
+      req.user?.organizationId ?? undefined,
+    );
     res.status(200).json({
       success: true,
       data: jobPost,
