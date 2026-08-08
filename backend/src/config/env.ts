@@ -52,7 +52,7 @@ const envSchema = z
 
     // Application URLs (for email links)
     APP_URL: z.string().default("http://localhost:3000"),
-    FRONTEND_URL: z.string().default("http://localhost:5173"),
+    FRONTEND_URL: z.string().default("http://localhost:3001"),
 
     // AI Matching Engine Configuration
     SEMANTIC_PROVIDER: z.enum(["pgvector", "onnx", "tfidf"]).default("pgvector"),
