@@ -15,7 +15,7 @@ const envSchema = z
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
-    CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:3000"),
+    CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:3000,http://localhost:3001"),
     PORT: z.coerce.number().default(3000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace"])
@@ -114,7 +114,7 @@ if (!parsedEnv.success) {
 const rawCors = parsedEnv.data.CORS_ORIGIN;
 const ALLOWED_CORS_ORIGINS = rawCors
   ? rawCors.split(",").map((origin) => origin.trim()).filter(Boolean)
-  : ["http://localhost:5173", "http://localhost:3000"];
+  : ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
 
 export const env = {
   ...parsedEnv.data,
