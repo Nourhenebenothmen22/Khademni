@@ -51,8 +51,9 @@ if (env.REDIS_URL) {
     });
 
     logger.info("BullMQ matching queue and worker initialized successfully.");
-  } catch (err: any) {
-    logger.warn({ err: err?.message }, "Failed to initialize BullMQ, falling back to local processing.");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    logger.warn({ err: message }, "Failed to initialize BullMQ, falling back to local processing.");
   }
 }
 
@@ -65,8 +66,9 @@ async function saveJobState(state: MatchingJobState): Promise<void> {
         JOB_TTL_SECONDS,
         JSON.stringify(state),
       );
-    } catch (err: any) {
-      logger.warn({ err: err?.message, queueJobId: state.queueJobId }, "Failed to persist job state to Redis.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logger.warn({ err: message, queueJobId: state.queueJobId }, "Failed to persist job state to Redis.");
     }
   }
 }
@@ -78,8 +80,9 @@ async function loadJobState(queueJobId: string): Promise<MatchingJobState | null
       if (raw) {
         return JSON.parse(raw) as MatchingJobState;
       }
-    } catch (err: any) {
-      logger.warn({ err: err?.message, queueJobId }, "Failed to load job state from Redis, falling back to local map.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logger.warn({ err: message, queueJobId }, "Failed to load job state from Redis, falling back to local map.");
     }
   }
   return matchingJobsStore.get(queueJobId) || null;
@@ -102,6 +105,13 @@ export async function enqueueJobMatching(
 
   if (!job) {
     throw new AppError("Job post not found.", 404);
+  }
+
+  if (env.NODE_ENV === "production" && !env.REDIS_URL) {
+    throw new AppError(
+      "Asynchronous background matching queue requires a configured Redis instance (REDIS_URL) in production environment.",
+      503,
+    );
   }
 
   let activeModelId = modelId;
@@ -201,9 +211,10 @@ async function processMatchingQueueJob(
       { queueJobId, processedCount: state.processedCount, failedCount: state.failedCount },
       "Background AI matching job completed.",
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown matching execution failure";
     state.status = "failed";
-    state.errorMessage = error?.message || "Unknown matching execution failure";
+    state.errorMessage = message;
     state.finishedAt = new Date().toISOString();
     await saveJobState(state);
   }

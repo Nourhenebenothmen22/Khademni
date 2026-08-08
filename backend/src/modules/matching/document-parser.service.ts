@@ -5,9 +5,9 @@ import { AppError } from "../../common/errors/app-error.js";
 import { getAbsolutePath, fileExists } from "../../lib/file-storage.js";
 import { logger } from "../../lib/logger.js";
 
-const pdfParse = ((pdfParseModule as any).default || pdfParseModule) as (
+const pdfParse = ((pdfParseModule as { default?: unknown }).default || pdfParseModule) as (
   dataBuffer: Buffer,
-  options?: any,
+  options?: Record<string, unknown>,
 ) => Promise<{ text: string }>;
 
 interface GenericDocumentMetadata {
@@ -62,12 +62,14 @@ export async function parseDocument(documentId: string) {
       extractedText = pdfData.text || "";
       parserName = "PdfParseEngine";
       parserVersion = "1.1.1";
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
       logger.warn(
-        { err: err?.message, documentId },
+        { err: message, documentId },
         "pdf-parse extraction failed, falling back to clean text extraction.",
       );
-      extractedText = buffer.toString("latin1").replace(/[^\x20-\x7E\n\r\t]/g, " ");
+      // eslint-disable-next-line no-control-regex
+      extractedText = buffer.toString("utf-8").replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]/g, " ");
     }
   } else {
     extractedText = buffer.toString("utf-8");
@@ -79,7 +81,7 @@ export async function parseDocument(documentId: string) {
     data: {
       documentId: doc.id,
       extractedText,
-      structuredData: structuredData as any,
+      structuredData: structuredData as unknown as object,
       parserName,
       parserVersion,
     },
