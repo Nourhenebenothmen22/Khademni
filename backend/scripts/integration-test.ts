@@ -1,6 +1,7 @@
 import { app } from '../src/app.js';
 import { prisma } from '../src/lib/prisma.js';
 import { generate } from 'otplib';
+import argon2 from 'argon2';
 import type { Server } from 'node:http';
 
 async function runIntegrationTest() {
@@ -52,11 +53,13 @@ async function runIntegrationTest() {
       },
     });
 
+    const adminPasswordHash = await argon2.hash(password);
+
     const adminUser = await prisma.user.create({
       data: {
         fullName: 'Admin User',
         email: adminEmail,
-        passwordHash: candidateUserId,
+        passwordHash: adminPasswordHash,
         role: 'ADMIN',
         organizationId: testOrg.id,
         isEmailVerified: true,
