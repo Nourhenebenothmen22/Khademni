@@ -73,10 +73,10 @@ export async function loginUser(payload: LoginPayload): Promise<ApiResponse<Auth
 }
 
 export async function loginMfa(payload: MfaLoginPayload): Promise<ApiResponse<AuthSuccessData>> {
-  const userId = payload.userId || payload.mfaToken;
+  const mfaToken = payload.mfaToken || payload.userId;
   const res = await apiRequest<AuthSuccessData>("/auth/mfa/login", {
     method: "POST",
-    body: JSON.stringify({ userId, code: payload.code }),
+    body: JSON.stringify({ mfaToken, userId: payload.userId, code: payload.code }),
   });
 
   if (res.data?.accessToken) {

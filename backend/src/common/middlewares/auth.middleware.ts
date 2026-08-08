@@ -27,6 +27,9 @@ export const authenticate = async (
     }
 
     const payload = await verifyAccessToken(token);
+    if (payload.isMfaPending) {
+      throw new AppError("MFA verification required. Complete 2FA before accessing protected resources.", 401);
+    }
     req.user = payload;
     next();
   } catch (error) {

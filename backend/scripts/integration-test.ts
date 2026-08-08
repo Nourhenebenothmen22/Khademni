@@ -118,15 +118,49 @@ async function runIntegrationTest() {
       body: JSON.stringify({ email: candidateEmail, password }),
     });
     const mfaLoginChallengeData = await mfaLoginChallengeRes.json();
-    if (!mfaLoginChallengeData.mfaRequired) throw new Error('MFA challenge should be required.');
-    console.log('  ✅ Login correctly requested MFA challenge.');
+    if (!mfaLoginChallengeData.data?.mfaRequired || !mfaLoginChallengeData.data?.mfaToken) {
+      throw new Error('MFA challenge should be required and return mfaToken.');
+    }
+    const mfaPendingToken = mfaLoginChallengeData.data.mfaToken;
+    console.log('  ✅ Login correctly requested MFA challenge and issued mfaToken.');
 
-    // Perform MFA Login
+    // Test 3a: Attempting protected API access with mfaPendingToken -> MUST BE BLOCKED
+    const protectedMfaRes = await fetch(`${baseUrl}/users/me`, {
+      headers: { Authorization: `Bearer ${mfaPendingToken}` },
+    });
+    if (protectedMfaRes.status !== 401) {
+      throw new Error(`Protected API allowed access with mfaPendingToken! Status: ${protectedMfaRes.status}`);
+    }
+    console.log('  ✅ Protected API correctly blocked access with mfaPendingToken (401 Unauthorized).');
+
+    // Test 3b: MFA Login with wrong TOTP code -> MUST FAIL
+    const wrongMfaRes = await fetch(`${baseUrl}/auth/mfa/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mfaToken: mfaPendingToken, code: '000000' }),
+    });
+    if (wrongMfaRes.ok) {
+      throw new Error('MFA Login succeeded with wrong TOTP code!');
+    }
+    console.log('  ✅ MFA Login correctly rejected wrong TOTP code.');
+
+    // Test 3c: MFA Login without mfaToken (raw userId only) -> MUST FAIL
+    const noTokenMfaRes = await fetch(`${baseUrl}/auth/mfa/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: candidateUserId, code: '123456' }),
+    });
+    if (noTokenMfaRes.ok) {
+      throw new Error('MFA Login succeeded without mfaToken!');
+    }
+    console.log('  ✅ MFA Login correctly rejected missing mfaToken.');
+
+    // Perform Valid MFA Login
     const loginTotpCode = await generate({ secret });
     const mfaLoginRes = await fetch(`${baseUrl}/auth/mfa/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: candidateUserId, code: loginTotpCode }),
+      body: JSON.stringify({ mfaToken: mfaPendingToken, userId: candidateUserId, code: loginTotpCode }),
     });
     const mfaLoginData = await mfaLoginRes.json();
     if (!mfaLoginRes.ok) throw new Error(`MFA Login failed: ${JSON.stringify(mfaLoginData)}`);
@@ -160,11 +194,18 @@ async function runIntegrationTest() {
     console.log('  ✅ Refresh token reuse attack blocked & active sessions invalidated.');
 
     // Re-authenticate candidate after lockout test
+    const reloginRes = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: candidateEmail, password }),
+    });
+    const reloginData = await reloginRes.json();
+    const newMfaToken = reloginData.data.mfaToken;
     const postLockoutCode = await generate({ secret });
     const postLockoutRes = await fetch(`${baseUrl}/auth/mfa/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: candidateUserId, code: postLockoutCode }),
+      body: JSON.stringify({ mfaToken: newMfaToken, userId: candidateUserId, code: postLockoutCode }),
     });
     const postLockoutData = await postLockoutRes.json();
     candidateToken = postLockoutData.data.accessToken;
@@ -432,7 +473,10 @@ async function runIntegrationTest() {
     console.log(`  ✅ User avatar uploaded successfully. Avatar URL: ${uploadAvatarData.data.avatarUrl}`);
 
     // Stream Avatar Image
-    const streamAvatarRes = await fetch(`http://localhost:${PORT}${uploadAvatarData.data.avatarUrl}`);
+    const streamUrl = uploadAvatarData.data.avatarUrl.startsWith("http")
+      ? uploadAvatarData.data.avatarUrl.replace(":3000", `:${PORT}`)
+      : `http://localhost:${PORT}${uploadAvatarData.data.avatarUrl}`;
+    const streamAvatarRes = await fetch(streamUrl);
     if (!streamAvatarRes.ok) {
       throw new Error(`Avatar streaming failed with status ${streamAvatarRes.status}`);
     }

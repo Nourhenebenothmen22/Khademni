@@ -7,6 +7,8 @@ import { hashPassword, verifyPassword } from "../../lib/password.js";
 import {
   signAccessToken,
   signRefreshToken,
+  signMfaPendingToken,
+  verifyMfaPendingToken,
   verifyRefreshToken,
 } from "../../lib/jwt.js";
 import { generateRandomToken, hashToken } from "../../lib/token.js";
@@ -158,9 +160,22 @@ export async function loginUser(
   });
 
   if (user.mfaEnabled) {
+    // Revoke pre-existing active sessions so old refresh tokens cannot bypass MFA
+    await prisma.authSession.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    const mfaToken = await signMfaPendingToken({
+      userId: user.id,
+      role: user.role,
+      organizationId: user.organizationId ?? undefined,
+    });
+
     return {
       mfaRequired: true,
       userId: user.id,
+      mfaToken,
       message: "Multi-factor authentication code required.",
     };
   }
@@ -218,8 +233,17 @@ export async function loginMfa(
   ipAddress?: string,
   userAgent?: string,
 ) {
+  let mfaPayload;
+  try {
+    mfaPayload = await verifyMfaPendingToken(input.mfaToken);
+  } catch {
+    throw new AppError("MFA session expired or invalid. Please log in again.", 401);
+  }
+
+  const userId = mfaPayload.userId;
+
   const user = await prisma.user.findUnique({
-    where: { id: input.userId },
+    where: { id: userId },
   });
 
   if (!user || !user.mfaEnabled || !user.mfaSecret) {
@@ -259,6 +283,16 @@ export async function loginMfa(
       userAgent,
       expiresAt,
     },
+  });
+
+  logAuditAction({
+    userId: user.id,
+    organizationId: user.organizationId ?? undefined,
+    action: 'LOGIN_MFA_SUCCESS',
+    entityType: 'User',
+    entityId: user.id,
+    ipAddress,
+    userAgent,
   });
 
   return {

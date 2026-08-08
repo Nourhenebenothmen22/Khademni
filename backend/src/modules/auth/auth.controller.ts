@@ -49,11 +49,14 @@ export async function loginController(
     const result = await authService.loginUser(req.body, ip, userAgent);
 
     if (result.mfaRequired) {
+      res.clearCookie("access_token");
+      res.clearCookie("refresh_token");
       res.status(200).json({
         success: true,
         data: {
           mfaRequired: true,
           userId: result.userId,
+          mfaToken: result.mfaToken,
           message: result.message,
         },
       });

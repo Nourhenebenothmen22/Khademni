@@ -11,7 +11,7 @@ import { ShieldCheck, KeyRound } from "lucide-react";
 export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{ userId?: string; mfaToken?: string }> }) {
   const router = useRouter();
   const { userId, mfaToken } = use(searchParams);
-  const activeUserId = userId || mfaToken;
+  const activeMfaToken = mfaToken || userId;
   const { setAuthUser } = useAuth();
 
   const [code, setCode] = useState("");
@@ -19,15 +19,15 @@ export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeUserId) {
-      toast.error("Invalid MFA session");
+    if (!activeMfaToken) {
+      toast.error("Invalid or expired MFA session. Please sign in again.");
       router.push("/login");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await loginMfa({ userId: activeUserId, code });
+      const res = await loginMfa({ mfaToken: activeMfaToken, userId, code });
       if (res.success && res.data?.user) {
         setAuthUser(res.data.user, res.data.accessToken);
         toast.success("MFA authentication successful!");

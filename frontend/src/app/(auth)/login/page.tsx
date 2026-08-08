@@ -23,9 +23,12 @@ export default function LoginPage() {
 
     try {
       const res = await loginUser({ email, password });
-      if (res.data?.mfaRequired && res.data.userId) {
+      if (res.data?.mfaRequired) {
         toast.info("MFA verification required");
-        router.push(`/mfa/login?userId=${encodeURIComponent(res.data.userId)}`);
+        const queryParams = new URLSearchParams();
+        if (res.data.mfaToken) queryParams.set("mfaToken", res.data.mfaToken);
+        if (res.data.userId) queryParams.set("userId", res.data.userId);
+        router.push(`/mfa/login?${queryParams.toString()}`);
         return;
       }
 

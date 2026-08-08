@@ -39,7 +39,8 @@ export const mfaVerifySchema = z.object({
 export type MfaVerifyInput = z.infer<typeof mfaVerifySchema>;
 
 export const mfaLoginSchema = z.object({
-  userId: cuidSchema,
+  mfaToken: z.string().min(1, "MFA token is required"),
+  userId: cuidSchema.optional(),
   code: z
     .string()
     .length(6, "MFA code must be exactly 6 digits")
