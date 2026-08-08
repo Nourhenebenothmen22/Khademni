@@ -25,18 +25,100 @@ interface ModelHyperparameters {
 }
 
 /**
- * Gets rank for a degree based on dynamic model hierarchy configuration.
+ * Builds a regex pattern with word boundaries (\b) and acronym support (e.g. M.A., B.S., Ph.D.)
  */
-function getDegreeRank(text: string, degreeHierarchy: Record<string, number>): number {
+function buildDegreePattern(token: string): RegExp {
+  const normalizedToken = token.trim().toLowerCase();
+  const escaped = normalizedToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  if (normalizedToken.length <= 3) {
+    const dotted = normalizedToken.split("").join("\\.?") + "\\.?";
+    return new RegExp(`\\b(${dotted})(?=\\s|\\b|$|[.,;:!?])`, "i");
+  }
+
+  return new RegExp(`\\b${escaped}\\b`, "i");
+}
+
+/**
+ * Gets rank for a degree based on dynamic model hierarchy configuration.
+ * Uses strict word boundaries to avoid false positives (e.g. "mathematics" matching "ma").
+ */
+export function getDegreeRank(text: string, degreeHierarchy: Record<string, number>): number {
+  if (!text || text.trim().length === 0) return 0;
+
   let highest = 0;
-  const lower = text.toLowerCase();
   for (const [degreeName, rank] of Object.entries(degreeHierarchy)) {
-    if (lower.includes(degreeName.toLowerCase()) && rank > highest) {
+    const pattern = buildDegreePattern(degreeName);
+    if (pattern.test(text) && rank > highest) {
       highest = rank;
     }
   }
   return highest;
 }
+
+/**
+ * Extracts total years of experience using multi-range date parsing (e.g. 2018-2023)
+ * and explicit experience statements rather than taking only the first single regex match.
+ */
+export function extractExperienceYears(candidateText: string): number {
+  if (!candidateText) return 0;
+
+  const currentYear = new Date().getFullYear();
+  let maxExplicitYears = 0;
+  let totalRangeYears = 0;
+
+  const explicitRegex = /\b(\d{1,2})\s*\+?\s*(?:years?|yrs?|ans?)(?:\s+(?:of|de|d'|d’)\s*)?(?:teaching|experience|expérience|enseignement|work|practice)?\b/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = explicitRegex.exec(candidateText)) !== null) {
+    const matchedVal = match[1];
+    if (matchedVal) {
+      const parsed = parseInt(matchedVal, 10);
+      if (!isNaN(parsed) && parsed > 0 && parsed <= 50) {
+        if (parsed > maxExplicitYears) maxExplicitYears = parsed;
+      }
+    }
+  }
+
+  const rangeRegex = /\b(19\d\d|20\d\d)\s*(?:-|–|to|à)\s*(19\d\d|20\d\d|present|actuel|aujourd'hui)\b/gi;
+  while ((match = rangeRegex.exec(candidateText)) !== null) {
+    const startStr = match[1];
+    const endStr = match[2];
+    if (startStr && endStr) {
+      const startYear = parseInt(startStr, 10);
+      const endYearToken = endStr.toLowerCase();
+      const endYear = (endYearToken === "present" || endYearToken === "actuel" || endYearToken === "aujourd'hui")
+        ? currentYear
+        : parseInt(endYearToken, 10);
+
+      if (endYear >= startYear && (endYear - startYear) <= 45) {
+        totalRangeYears += (endYear - startYear);
+      }
+    }
+  }
+
+  return Math.max(maxExplicitYears, totalRangeYears);
+}
+
+/**
+ * Calculates dynamic confidence score based on document parse quality, keyword coverage,
+ * rule completeness, and semantic score.
+ */
+export function calculateDynamicConfidence(factors: {
+  parseQuality: number;
+  keywordCoverage: number;
+  ruleCompleteness: number;
+  semanticScore: number;
+}): number {
+  const score =
+    factors.parseQuality * 0.20 +
+    factors.keywordCoverage * 0.30 +
+    factors.ruleCompleteness * 0.30 +
+    (factors.semanticScore / 100) * 0.20;
+
+  return Math.round(Math.max(0.50, Math.min(0.99, score)) * 100) / 100;
+}
+
 
 export async function runMatching(
   applicationId: string,
@@ -144,8 +226,8 @@ export async function runMatching(
 
     // ─── 1. Dynamic Skills & Keywords Engine ────────────────────────
     let keywordsScore = 0;
-    const matchedKeywords: any[] = [];
-    const missingKeywords: any[] = [];
+    const matchedKeywords: Array<{ keyword: string; type: string; weight: number }> = [];
+    const missingKeywords: Array<{ keyword: string; type: string; weight: number }> = [];
 
     let totalKeywordWeight = 0;
     let earnedKeywordWeight = 0;
@@ -169,7 +251,7 @@ export async function runMatching(
     let rulesScore = 0;
     let totalRuleWeight = 0;
     let earnedRuleWeight = 0;
-    const ruleResults: any[] = [];
+    const ruleResults: Array<{ name: string; type: string; weight: number; matched: boolean; explanation: string }> = [];
 
     const activeRules = application.jobPost.matchingRules.filter((r) => r.isActive);
 
@@ -177,7 +259,7 @@ export async function runMatching(
       totalRuleWeight += rule.weight;
       let matched = false;
       let explanation = "";
-      const condition = (rule.condition as Record<string, any>) || {};
+      const condition = (rule.condition as Record<string, unknown>) || {};
 
       switch (rule.type) {
         case "DEGREE": {
@@ -197,11 +279,9 @@ export async function runMatching(
 
         case "EXPERIENCE": {
           const reqYears = Number(condition.years || condition.value || 0);
-          let detectedYears = 0;
-          const expMatch = candidateText.match(/(\d+)\+?\s*(?:years?|yrs?)/);
-          if (expMatch && expMatch[1]) detectedYears = parseInt(expMatch[1], 10);
+          const detectedYears = extractExperienceYears(candidateText);
 
-          matched = detectedYears >= reqYears || candidateText.includes(`${reqYears} years`);
+          matched = detectedYears >= reqYears;
           explanation = matched
             ? `Experience (${detectedYears}+ years) satisfies rule requirement (${reqYears} years)`
             : `Experience (${detectedYears} years) does not satisfy requirement (${reqYears} years)`;
@@ -284,6 +364,16 @@ export async function runMatching(
     else if (totalScore >= recThresholds.average) recommendation = "AVERAGE";
     else recommendation = "NOT_RECOMMENDED";
 
+    const parseQuality = candidateText.length > 50 ? 1.0 : candidateText.length > 0 ? 0.6 : 0.0;
+    const keywordCoverage = application.jobPost.keywords.length > 0 ? matchedKeywords.length / application.jobPost.keywords.length : 1.0;
+    const ruleCompleteness = activeRules.length > 0 ? ruleResults.filter((r) => r.matched).length / activeRules.length : 1.0;
+    const calculatedConfidence = calculateDynamicConfidence({
+      parseQuality,
+      keywordCoverage,
+      ruleCompleteness,
+      semanticScore,
+    });
+
     const explanationText = `Dynamic hybrid score ${totalScore}% (Rule-based: ${ruleBasedScore.toFixed(1)}% @ ${(ruleNorm * 100).toFixed(0)}% weight, Semantic [${semanticProvider.name}]: ${semanticScore.toFixed(1)}% @ ${(semanticNorm * 100).toFixed(0)}% weight). Keywords matched ${matchedKeywords.length}/${application.jobPost.keywords.length}, Rules satisfied ${ruleResults.filter((r) => r.matched).length}/${activeRules.length}.`;
 
     // ─── 5. Database Persistence ──────────────────────────────────
@@ -292,7 +382,7 @@ export async function runMatching(
       data: {
         status: "COMPLETED",
         totalScore,
-        confidence: 0.95,
+        confidence: calculatedConfidence,
         matchedKeywords,
         missingKeywords,
         ruleResults,
@@ -306,7 +396,7 @@ export async function runMatching(
           semanticWeight: semanticNorm,
           providerUsed: semanticProvider.name,
         },
-        semanticResult: semanticResult as any,
+        semanticResult: semanticResult as unknown as object,
         explanation: explanationText,
         finishedAt: new Date(),
       },
