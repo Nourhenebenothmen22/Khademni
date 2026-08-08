@@ -44,5 +44,5 @@ jobs:
       - name: Check Prisma schema & generate client
         run: npm run db:generate
 
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Run full test suite
+        run: npm run test
