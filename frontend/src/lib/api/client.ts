@@ -18,17 +18,24 @@ export function setCsrfToken(token: string | null) {
 }
 
 export async function fetchCsrfToken(): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/auth/csrf`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/csrf`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
 
-  const json: ApiResponse<{ csrfToken: string }> = await res.json();
-  if (json.data?.csrfToken) {
-    csrfToken = json.data.csrfToken;
-    return csrfToken;
+    if (!res.ok) return "";
+
+    const json: ApiResponse<{ csrfToken: string }> = await res.json();
+    if (json.data?.csrfToken) {
+      csrfToken = json.data.csrfToken;
+      return csrfToken;
+    }
+    return "";
+  } catch {
+    return "";
   }
-  return "";
 }
 
 export async function apiRequest<T = unknown>(
@@ -52,45 +59,53 @@ export async function apiRequest<T = unknown>(
     headers.set("X-CSRF-Token", csrfToken);
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: options.credentials || "include",
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: options.credentials || "include",
+    });
 
-  if (response.status === 401 && retry && !endpoint.includes("/auth/refresh") && !endpoint.includes("/auth/login")) {
-    // Attempt automatic refresh token rotation
-    try {
-      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
+    if (response.status === 401 && retry && !endpoint.includes("/auth/refresh") && !endpoint.includes("/auth/login")) {
+      // Attempt automatic refresh token rotation
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
 
-      if (refreshRes.ok) {
-        const refreshJson: ApiResponse<{ accessToken: string }> = await refreshRes.json();
-        if (refreshJson.data?.accessToken) {
-          accessToken = refreshJson.data.accessToken;
-          return apiRequest<T>(endpoint, options, false);
+        if (refreshRes.ok) {
+          const refreshJson: ApiResponse<{ accessToken: string }> = await refreshRes.json();
+          if (refreshJson.data?.accessToken) {
+            accessToken = refreshJson.data.accessToken;
+            return apiRequest<T>(endpoint, options, false);
+          }
         }
+      } catch {
+        accessToken = null;
       }
-    } catch {
-      accessToken = null;
     }
-  }
 
-  const data = await response.json().catch(() => ({
-    success: false,
-    message: "Failed to parse JSON response from server",
-  }));
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: "Failed to parse JSON response from server",
+    }));
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || data.error || `HTTP error ${response.status}`,
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    return data;
+  } catch (err: unknown) {
     return {
       success: false,
-      message: data.message || data.error || `HTTP error ${response.status}`,
-      error: data.error || `HTTP ${response.status}`,
+      message: (err as Error).message || "Network error — connection failed",
+      error: "NETWORK_ERROR",
     };
   }
-
-  return data;
 }
