@@ -23,7 +23,7 @@ export const applySecurityMiddleware = (app: Express): void => {
         if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
           callback(null, true);
         } else {
-          callback(new Error(`CORS error: Origin ${origin} not allowed by policy`));
+          callback(null, false);
         }
       },
       credentials: true,
