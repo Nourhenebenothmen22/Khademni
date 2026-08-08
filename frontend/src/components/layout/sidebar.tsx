@@ -23,6 +23,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const [sidebarAvatarError, setSidebarAvatarError] = React.useState(false);
 
   const candidateNav = [
     { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard },
@@ -53,8 +54,13 @@ export function Sidebar() {
         {/* Top User Card in Sidebar */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs text-center space-y-3">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 border border-slate-200 overflow-hidden shadow-inner">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+            {user?.avatarUrl && !sidebarAvatarError ? (
+              <img
+                src={user.avatarUrl.startsWith("http") ? user.avatarUrl : `http://localhost:3000${user.avatarUrl}`}
+                alt={user.fullName}
+                className="h-full w-full object-cover"
+                onError={() => setSidebarAvatarError(true)}
+              />
             ) : (
               <UserIcon className="h-12 w-12 text-slate-400" />
             )}
