@@ -1,10 +1,17 @@
 import argon2 from "argon2";
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { generateRandomToken, hashToken } from "../../lib/token.js";
 import { sendVerificationEmail } from "../../lib/email.js";
+import { saveFile, getFileStream, deleteFile, fileExists } from "../../lib/file-storage.js";
 import type { UpdateUserInput, ChangePasswordInput } from "../../common/validators/user.validators.js";
+
+export function getAvatarUrl(userId: string, avatarKey: string | null): string | null {
+  return avatarKey ? `/api/v1/users/${userId}/avatar` : null;
+}
 
 export async function getUserProfile(userId: string) {
   const user = await prisma.user.findUnique({
@@ -14,11 +21,13 @@ export async function getUserProfile(userId: string) {
       fullName: true,
       email: true,
       role: true,
+      avatarKey: true,
       isEmailVerified: true,
       mfaEnabled: true,
       createdAt: true,
       updatedAt: true,
       lastLoginAt: true,
+      organizationId: true,
       _count: {
         select: {
           applications: true,
@@ -32,7 +41,10 @@ export async function getUserProfile(userId: string) {
     throw new AppError("User profile not found.", 404);
   }
 
-  return user;
+  return {
+    ...user,
+    avatarUrl: getAvatarUrl(user.id, user.avatarKey),
+  };
 }
 
 export async function updateUserProfile(
@@ -85,6 +97,7 @@ export async function updateUserProfile(
       fullName: true,
       email: true,
       role: true,
+      avatarKey: true,
       isEmailVerified: true,
       mfaEnabled: true,
       updatedAt: true,
@@ -114,7 +127,127 @@ export async function updateUserProfile(
     metadata: { fieldsUpdated: Object.keys(input), emailChanged },
   });
 
-  return updatedUser;
+  return {
+    ...updatedUser,
+    avatarUrl: getAvatarUrl(updatedUser.id, updatedUser.avatarKey),
+  };
+}
+
+export async function uploadUserAvatar(
+  userId: string,
+  file?: Express.Multer.File,
+) {
+  if (!file) {
+    throw new AppError("No image file uploaded.", 400);
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  // Delete previous avatar file if exists
+  if (user.avatarKey) {
+    await deleteFile(user.avatarKey).catch(() => {});
+  }
+
+  const ext = path.extname(file.originalname).toLowerCase() || ".png";
+  const storageKey = `avatars/users/${userId}_${Date.now()}${ext}`;
+
+  const fileBuffer = fs.readFileSync(file.path);
+  await saveFile(fileBuffer, storageKey);
+
+  // Clean temp file
+  fs.unlink(file.path, () => {});
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarKey: storageKey },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      avatarKey: true,
+      isEmailVerified: true,
+      mfaEnabled: true,
+    },
+  });
+
+  logAuditAction({
+    userId,
+    organizationId: user.organizationId ?? undefined,
+    action: "USER_AVATAR_UPLOADED",
+    entityType: "User",
+    entityId: userId,
+  });
+
+  return {
+    ...updatedUser,
+    avatarUrl: getAvatarUrl(updatedUser.id, updatedUser.avatarKey),
+  };
+}
+
+export async function deleteUserAvatar(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  if (user.avatarKey) {
+    await deleteFile(user.avatarKey).catch(() => {});
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarKey: null },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      avatarKey: true,
+      isEmailVerified: true,
+      mfaEnabled: true,
+    },
+  });
+
+  logAuditAction({
+    userId,
+    organizationId: user.organizationId ?? undefined,
+    action: "USER_AVATAR_DELETED",
+    entityType: "User",
+    entityId: userId,
+  });
+
+  return {
+    ...updatedUser,
+    avatarUrl: null,
+  };
+}
+
+export async function getUserAvatarStream(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, avatarKey: true },
+  });
+
+  if (!user || !user.avatarKey) {
+    throw new AppError("Avatar image not found.", 404);
+  }
+
+  const exists = await fileExists(user.avatarKey);
+  if (!exists) {
+    throw new AppError("Avatar file not found on disk.", 404);
+  }
+
+  const stream = getFileStream(user.avatarKey);
+  const ext = path.extname(user.avatarKey).toLowerCase();
+  let mimeType = "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+  if (ext === ".webp") mimeType = "image/webp";
+
+  return { stream, mimeType };
 }
 
 export async function changePassword(
@@ -158,4 +291,3 @@ export async function changePassword(
 
   return { message: "Password changed successfully. Please log in again." };
 }
-
