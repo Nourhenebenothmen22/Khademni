@@ -6,7 +6,15 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { updateMyProfile, changePassword } from "@/features/users/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { toast } from "sonner";
-import { ShieldCheck } from "lucide-react";
+import {
+  User as UserIcon,
+  Lock,
+  ShieldCheck,
+  KeyRound,
+  Mail,
+  ArrowRight,
+  Circle,
+} from "lucide-react";
 
 export default function ProfileSettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -26,7 +34,7 @@ export default function ProfileSettingsPage() {
     try {
       const res = await updateMyProfile({ fullName });
       if (res.success) {
-        toast.success("Profile updated!");
+        toast.success("Profile updated successfully!");
         refreshUser();
       } else {
         toast.error(res.message || "Failed to update profile");
@@ -60,91 +68,225 @@ export default function ProfileSettingsPage() {
 
   return (
     <DashboardShell>
-      <div className="space-y-8 max-w-2xl">
+      <div className="space-y-6 max-w-6xl">
+        {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Profile & Security Settings</h1>
-          <p className="mt-1 text-sm text-slate-600">Update personal information, change password, or configure MFA.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Account & Security Settings</h1>
+          <p className="mt-1 text-xs sm:text-sm font-medium text-slate-500">
+            Manage your personal profile details, security credentials, and authentication preferences.
+          </p>
         </div>
 
-        {/* Profile Details Form */}
-        <form onSubmit={handleUpdateProfile} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 border-b pb-2">Profile Information</h2>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              value={fullName}
-              onChange={(e) => setFullNameInput(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-            <input
-              type="email"
-              disabled
-              value={user?.email || ""}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-500"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={profileLoading}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
-            {profileLoading ? "Saving..." : "Save Profile"}
-          </button>
-        </form>
+        {/* 2-Column Layout Grid matching screenshot */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Main Forms Column (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Personal Information Card */}
+            <form
+              onSubmit={handleUpdateProfile}
+              className="rounded-[22px] border border-slate-200/80 bg-white p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-5"
+            >
+              <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e2e3f6] text-[#282276] font-bold">
+                  <UserIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Personal Information</h2>
+                  <p className="text-xs text-slate-400 font-medium">Update your public profile details</p>
+                </div>
+              </div>
 
-        {/* Change Password Form */}
-        <form onSubmit={handleChangePassword} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 border-b pb-2">Change Password</h2>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-            <input
-              type="password"
-              required
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={passwordLoading}
-            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900"
-          >
-            {passwordLoading ? "Updating..." : "Update Password"}
-          </button>
-        </form>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                    FULL NAME <span className="text-[#282276]">* (EDITABLE)</span>
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullNameInput(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 pl-10 pr-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 transition-all bg-white"
+                      placeholder="Nourhene ben othmen"
+                    />
+                  </div>
+                </div>
 
-        {/* MFA Redirect Banner */}
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-indigo-600" />
-            <div>
-              <h3 className="font-bold text-slate-900">Multi-Factor Authentication (TOTP)</h3>
-              <p className="text-xs text-slate-600 mt-0.5">Status: {user?.mfaEnabled ? "Enabled" : "Disabled"}</p>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+                      EMAIL ADDRESS
+                    </label>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Lock className="h-3 w-3" /> MANAGED & READ-ONLY
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <input
+                      type="email"
+                      disabled
+                      value={user?.email || "nourhenbenoth37@gmail.com"}
+                      className="w-full rounded-xl border border-slate-200 bg-[#eeeef4] pl-10 pr-4 py-2.5 text-sm font-semibold text-slate-600 cursor-not-allowed select-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="rounded-xl bg-[#282276] hover:bg-[#1f1a5f] text-white text-xs sm:text-sm font-extrabold px-6 py-2.5 shadow-sm transition-all disabled:opacity-50"
+                >
+                  {profileLoading ? "Saving..." : "Save Profile Details"}
+                </button>
+              </div>
+            </form>
+
+            {/* Change Password Card */}
+            <form
+              onSubmit={handleChangePassword}
+              className="rounded-[22px] border border-slate-200/80 bg-white p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-5"
+            >
+              <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fef9c3] text-[#854d0e] font-bold">
+                  <KeyRound className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Change Password</h2>
+                  <p className="text-xs text-slate-400 font-medium">Ensure your account is using a strong password</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                    CURRENT PASSWORD
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 bg-white"
+                    placeholder="••••••••••••"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
+                    NEW PASSWORD
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 bg-white"
+                    placeholder="Minimum 8 characters"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={passwordLoading || !currentPassword || newPassword.length < 8}
+                  className="rounded-xl bg-[#282276] hover:bg-[#1f1a5f] text-white text-xs sm:text-sm font-extrabold px-6 py-2.5 shadow-sm transition-all disabled:opacity-40"
+                >
+                  {passwordLoading ? "Updating..." : "Update Security Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column Security Cards (5 cols) */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* Multi-Factor Auth Card */}
+            <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e2e3f6] text-[#282276] font-bold">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Multi-Factor Auth (TOTP)</h3>
+                  <p className="text-xs text-slate-400 font-medium">Two-step verification</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-semibold py-1">
+                <span className="text-slate-600">MFA Status</span>
+                <span className="font-extrabold text-rose-600">
+                  {user?.mfaEnabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Adds an extra layer of security to your candidate account requiring a 6-digit code from Google Authenticator or Authy.
+              </p>
+
+              <Link
+                href="/settings/mfa"
+                className="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-[#edf0fc] hover:bg-[#e2e6fa] border border-[#d8ddf8] text-[#282276] text-xs font-extrabold py-2.5 px-4 transition-colors text-center"
+              >
+                <span>Configure Two-Factor Auth</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {/* Account Overview Card 1 */}
+            <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
+              <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                <Circle className="h-3.5 w-3.5 text-slate-400" />
+                <span>Account Overview</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-slate-600">MFA Status</span>
+                <span className="font-extrabold text-rose-600">
+                  {user?.mfaEnabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Adds an extra layer of security to your candidate account requiring a 6-digit code from Google Authenticator or Authy.
+              </p>
+
+              <Link
+                href="/settings/mfa"
+                className="inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-[#edf0fc] hover:bg-[#e2e6fa] border border-[#d8ddf8] text-[#282276] text-xs font-extrabold py-2.5 px-4 transition-colors text-center"
+              >
+                <span>Configure Two-Factor Auth</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {/* Account Overview Card 2 (Role & Email Status) */}
+            <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3.5 text-xs">
+              <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                <Circle className="h-3.5 w-3.5 text-slate-400" />
+                <span>Account Overview</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-600">Role Clearance:</span>
+                <span className="font-extrabold bg-[#dcfce7] text-[#15803d] px-2.5 py-0.5 rounded-md">
+                  {user?.role || "CANDIDATE"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-600">Email Status:</span>
+                <span className="font-extrabold text-[#15803d]">
+                  {user?.isEmailVerified ? "Verified" : "Pending"}
+                </span>
+              </div>
             </div>
           </div>
-          <Link
-            href="/settings/mfa"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
-          >
-            Configure MFA
-          </Link>
         </div>
       </div>
     </DashboardShell>

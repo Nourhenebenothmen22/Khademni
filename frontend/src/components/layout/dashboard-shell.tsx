@@ -47,7 +47,7 @@ export function DashboardShell({ children, requiredRole }: DashboardShellProps) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col">
+    <div className="min-h-screen bg-[#f4f5fa] flex flex-col">
       <Header />
       <div className="flex flex-1 mx-auto w-full max-w-7xl">
         <Sidebar />
