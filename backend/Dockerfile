@@ -47,7 +47,7 @@ EXPOSE 3000
 
 # Container healthcheck against /health endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
-# Start production server
-CMD ["node", "dist/index.js"]
+# Run migrations and start production server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
