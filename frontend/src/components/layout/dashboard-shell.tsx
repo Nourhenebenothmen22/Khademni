@@ -4,7 +4,7 @@ import React from "react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { useAuth } from "@/lib/auth/auth-context";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -13,8 +13,15 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, requiredRole }: DashboardShellProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
 
-  if (isLoading) {
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -23,10 +30,6 @@ export function DashboardShell({ children, requiredRole }: DashboardShellProps) 
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    redirect("/login");
   }
 
   if (requiredRole && user?.role !== requiredRole) {
