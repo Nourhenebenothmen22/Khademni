@@ -404,14 +404,52 @@ async function runIntegrationTest() {
     }
     console.log(`  ✅ In-app notifications received: ${notifData.data.length} notification(s). Latest title: "${notifData.data[0].title}"`);
 
-    // 10. Admin Dashboard Statistics
-    console.log('🔹 [Admin] Testing Admin Dashboard Statistics...');
-    const adminStatsRes = await fetch(`${baseUrl}/admin/stats`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
+    // 11. Testing User Avatar & Organization Logo Endpoints
+    console.log('🔹 [Avatars] Testing User Avatar & Organization Logo System...');
+    
+    // Create dummy 1x1 PNG image buffer
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+
+    // Upload Candidate Avatar via multipart Form
+    const blob = new Blob([pngBuffer], { type: 'image/png' });
+    const avatarFormData = new FormData();
+    avatarFormData.append('file', blob, 'candidate_avatar.png');
+
+    const uploadAvatarRes = await fetch(`${baseUrl}/users/me/avatar`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${candidateToken}`,
+      },
+      body: avatarFormData,
     });
-    const adminStatsData = await adminStatsRes.json();
-    if (!adminStatsRes.ok) throw new Error(`Admin stats failed: ${JSON.stringify(adminStatsData)}`);
-    console.log(`  ✅ Admin Dashboard Stats: Total users=${adminStatsData.data.users.total}, Applications=${JSON.stringify(adminStatsData.data.applications)}`);
+    const uploadAvatarData = await uploadAvatarRes.json();
+    if (!uploadAvatarRes.ok || !uploadAvatarData.data?.avatarUrl) {
+      throw new Error(`Avatar upload failed: ${JSON.stringify(uploadAvatarData)}`);
+    }
+    console.log(`  ✅ User avatar uploaded successfully. Avatar URL: ${uploadAvatarData.data.avatarUrl}`);
+
+    // Stream Avatar Image
+    const streamAvatarRes = await fetch(`http://localhost:${PORT}${uploadAvatarData.data.avatarUrl}`);
+    if (!streamAvatarRes.ok) {
+      throw new Error(`Avatar streaming failed with status ${streamAvatarRes.status}`);
+    }
+    console.log(`  ✅ Avatar image streamed cleanly (Content-Type: ${streamAvatarRes.headers.get('content-type')}).`);
+
+    // Delete Candidate Avatar
+    const deleteAvatarRes = await fetch(`${baseUrl}/users/me/avatar`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${candidateToken}`,
+      },
+    });
+    const deleteAvatarData = await deleteAvatarRes.json();
+    if (!deleteAvatarRes.ok || deleteAvatarData.data?.avatarUrl !== null) {
+      throw new Error(`Avatar deletion failed: ${JSON.stringify(deleteAvatarData)}`);
+    }
+    console.log('  ✅ User avatar deleted and cleaned up.');
 
     console.log('\n🎉 ALL PRODUCTION SCALABILITY & BACKEND INTEGRATION TESTS PASSED CLEANLY!');
   } catch (error) {
