@@ -82,5 +82,7 @@ The schema establishes targeted indexes to accelerate high-frequency queries:
 ## 5. Migration History & Seed Script Audit
 
 - **Migration History**: Migration [`20260804200000_add_organization_and_notifications`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/prisma/migrations/20260804200000_add_organization_and_notifications/migration.sql) establishes `organizations` and `notifications` tables, `organizationId` foreign keys, and missing audit log indexes in PostgreSQL.
+- **Migration Resolution & DB Sync**: Executed `prisma migrate resolve` and `npx prisma db push` to synchronize local and containerized PostgreSQL database schemas.
+- **Container Automated Migrations**: Updated `backend/Dockerfile` CMD to execute `npx prisma migrate deploy` automatically before starting the Node.js server.
 - **Seed Execution**: [`prisma/seed.ts`](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/prisma/seed.ts) uses Argon2 password hashing (`hashPassword()`) to seed default `Organization`, `User` accounts (Admin & Candidate), active `AIMatchingModel`, and sample `JobPost`. Executable cleanly via `npm run db:seed`.
 

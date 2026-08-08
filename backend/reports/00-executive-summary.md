@@ -86,6 +86,11 @@ This document presents the consolidated results of a complete, code-verifiable b
 18. **Environment Configuration Centralization & Bypass Elimination**: Synchronized `.env`, `.env.example`, and `src/config/env.ts` with 100% key parity (`REDIS_URL`, `SECRETS_PROVIDER`, `CSRF_SECRET`). Replaced direct `process.env.NODE_ENV` bypasses in `auth.controller.ts` with centralized `env.NODE_ENV` imports and removed unvalidated fallback database credentials in `prisma/seed.ts`.
 19. **Brevo SMTP Transport Integration & Automated Verification**: Configured `smtp-relay.brevo.com` on port `587` with verified SMTP account login (`99c774001@smtp-brevo.com`) and validated `xsmtpsib` key. Created `scripts/verify-smtp.ts` and confirmed 100% TLS handshake & authentication success.
 20. **SaaS Email Template Redesign & Button Standardization**: Refactored all 4 email templates (`sendVerificationEmail`, `sendPasswordResetEmail`, `sendWelcomeEmail`, `sendApplicationStatusEmail`) into a clean, responsive, lightweight SaaS layout with unified light blue CTA buttons (`#3b82f6`) across all workflows.
+21. **Account Lockout Reset on Password Update**: Updated `resetPassword` in `auth.service.ts` to reset `failedLoginAttempts: 0` and `lockedUntil: null` upon successful password update.
+22. **MFA Login Payload Structuring**: Standardized `loginController` in `auth.controller.ts` to wrap `mfaRequired`, `userId`, and `message` inside the standard `data` response object.
+23. **Matching Queue BOLA Prevention**: Added explicit `job.organizationId === organizationId` tenant ownership assertion in `matching-queue.service.ts` and `matching.controller.ts`.
+24. **Helmet CORP & CORS Header Whitelisting**: Configured Helmet `crossOriginResourcePolicy: { policy: "cross-origin" }` and CORS `allowedHeaders` with `X-Organization-Id` & `X-Tenant-Id` in `security.middleware.ts`, and set `Cross-Origin-Resource-Policy: cross-origin` on avatar media routes in `users.controller.ts`.
+25. **Notification Model DB Migration Sync & Validator Fix**: Synchronized PostgreSQL schema via `prisma migrate resolve` and fixed Zod boolean coercion for `isRead` query parameter in `notification.validators.ts`.
 
 
 

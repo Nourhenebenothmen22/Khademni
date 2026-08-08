@@ -209,7 +209,7 @@ All environment variables are validated at startup via `src/config/env.ts` using
 | `SMTP_FROM` | `string` | `Khademni <noreply@khademni.com>` | Outgoing email sender address |
 | `UPLOAD_DIR` | `string` | `./uploads` | Local filesystem storage path for uploaded CVs |
 | `APP_URL` | `string` | `http://localhost:3000` | Backend application base URL |
-| `FRONTEND_URL` | `string` | `http://localhost:5173` | Frontend application base URL |
+| `FRONTEND_URL` | `string` | `http://localhost:3001` | Frontend application base URL |
 
 > [!IMPORTANT]
 > **Production Secret Enforcement**: When `NODE_ENV === "production"`, `env.ts` enforces `superRefine()` checks that reject default development secret values (`prod_access_secret_...`, `prod_refresh_secret_...`, `khademni_csrf_secret_...`). The process will immediately halt (`process.exit(1)`) if default development secrets are detected in production.

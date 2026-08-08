@@ -81,8 +81,9 @@ RBAC is enforced using the `requireRole()` middleware ([auth.middleware.ts:L41-L
   - `admin.service.ts`: Scopes users (`organizationId`), job posts (`organizationId`), applications (`jobPost: { organizationId }`), audit logs (`organizationId`), and performs atomic `updateMany` for user status toggles.
   - `jobs.service.ts`: Scopes `createJobPost` with `organizationId` from JWT, `updateJobPost` with `findFirst({ where: { id, organizationId } })`, and `deleteJobPost` with `findFirst({ where: { id, organizationId } })`.
   - `applications.service.ts`: Scopes `getApplications` and `updateApplicationStatus` with `jobPost: { organizationId }`, and cleans up physical CV files on storage errors.
-  - `matching.service.ts`: Scopes `runMatching`, `runMatchingForJob`, `getMatchingRun`, `getMatchingRuns`, and `getApplicationScore` with `jobPost: { organizationId }`.
+  - `matching.service.ts` & `matching-queue.service.ts`: Scopes `runMatching`, `enqueueJobMatching`, `getMatchingRun`, `getMatchingRuns`, and `getApplicationScore` with `jobPost: { organizationId }`, returning 404/403 if target job post does not belong to the caller's tenant.
 - **JWT Refresh Token Propagation**: `auth.service.ts` (`refreshSession`) explicitly retains `organizationId` during token rotation (`signAccessToken` and `signRefreshToken`), ensuring active session context is preserved across token refreshes.
+- **Password Reset Security & Lockout Clearing**: `resetPassword` in `auth.service.ts` updates `passwordHash` and `passwordChangedAt` while clearing `failedLoginAttempts: 0` and `lockedUntil: null`, restoring account access upon successful token verification.
 - **Tenant-Aware Audit Logging**: `logAuditAction({ userId, organizationId, action, entityType, entityId, metadata })` in `lib/audit.ts` populates `organizationId` across all modules (`auth`, `users`, `jobs`, `applications`, `admin`), enabling tenant-specific audit trails.
 - **Profile Email Security**: When a user changes their email address via `updateProfile` in `users.service.ts`, `isEmailVerified` is automatically set to `false`, a new email verification token is created, and `sendVerificationEmail` is dispatched post-commit to verify ownership of the new email address.
 - **Audit Logging**: Logs `CROSS_TENANT_ACCESS_ATTEMPT` entries to `AuditLog` table containing user ID, requested organization ID, HTTP path, method, IP address, and user agent upon violation.
@@ -94,16 +95,18 @@ RBAC is enforced using the `requireRole()` middleware ([auth.middleware.ts:L41-L
 
 - **Library**: `otplib` (Time-based One-Time Password) & `qrcode`.
 - **Workflow**: User enables MFA -> Server generates TOTP Secret (`authenticator.generateSecret()`) and QR code data URL -> User confirms initial TOTP code -> `mfaEnabled` flag set to `true` on User model.
+- **Payload Alignment**: `loginController` in `auth.controller.ts` wraps `mfaRequired`, `userId`, and `message` inside a unified `data` object for consistent REST API responses.
 
 ---
 
 ## 5. Security Middleware & Defense-in-Depth
 
 1. **Double Submit Cookie CSRF Protection**: Enforced via `verifyCsrf` ([csrf.middleware.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/csrf.middleware.ts)) using constant-time `crypto.timingSafeEqual()` validation with non-empty buffer checks.
-2. **Helmet HTTP Headers**: Enforces strict CSP, HSTS, frameguard, and disables `X-Powered-By`.
-3. **Pino Header Redaction**: Redacts `Authorization`, `Cookie`, and `X-CSRF-Token` headers from application logs ([security.middleware.ts:L40](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/security.middleware.ts#L40)).
-4. **Input Sanitization & Type Enforcement**: All HTTP requests are parsed against strict Zod validation schemas.
-5. **Path Traversal Protection**: File storage key resolver ([file-storage.ts:L13-L22](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/file-storage.ts#L13-L22)) sanitizes relative paths and enforces directory boundary checks.
+2. **Helmet HTTP Headers & CORP Policy**: Enforces strict CSP, HSTS, frameguard, disables `X-Powered-By`, and configures `crossOriginResourcePolicy: { policy: "cross-origin" }` in `security.middleware.ts` to allow cross-origin media embedding. Avatar media stream routes in `users.controller.ts` explicitly set `Cross-Origin-Resource-Policy: cross-origin`.
+3. **CORS Allowed Headers Whitelist**: Explicitly configures `allowedHeaders` with `Content-Type`, `Authorization`, `X-Request-ID`, `X-CSRF-Token`, `X-Organization-Id`, and `X-Tenant-Id`.
+4. **Pino Header Redaction**: Redacts `Authorization`, `Cookie`, and `X-CSRF-Token` headers from application logs ([security.middleware.ts:L40](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/middlewares/security.middleware.ts#L40)).
+5. **Input Sanitization & Type Enforcement**: All HTTP requests are parsed against strict Zod validation schemas.
+6. **Path Traversal Protection**: File storage key resolver ([file-storage.ts:L13-L22](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/file-storage.ts#L13-L22)) sanitizes relative paths and enforces directory boundary checks.
 
 ---
 

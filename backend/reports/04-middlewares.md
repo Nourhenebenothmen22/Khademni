@@ -50,8 +50,8 @@ Step  9: Global Error Handler
 - **Purpose**: Enables distributed tracing across application log streams.
 
 ### 2. Security Middleware (`security.middleware.ts`)
-- **Helmet**: Secures HTTP headers (HSTS, Content Security Policy, X-Frame-Options, X-Content-Type-Options).
-- **CORS**: Validates origins against `ALLOWED_CORS_ORIGINS`. Allows requests without origin (mobile/curl). Supports credentials.
+- **Helmet**: Secures HTTP headers (HSTS, Content Security Policy, X-Frame-Options, X-Content-Type-Options) with `crossOriginResourcePolicy: { policy: "cross-origin" }` to allow cross-origin media embedding.
+- **CORS**: Validates origins against `ALLOWED_CORS_ORIGINS`. Explicitly whitelists `allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token", "X-Organization-Id", "X-Tenant-Id"]`. Allows requests without origin (mobile/curl). Supports credentials.
 - **Pino HTTP Logging**: Logs incoming HTTP requests while redacting `Authorization`, `Cookie`, and `X-CSRF-Token` headers for privacy.
 
 ### 3. Rate Limiting Middleware (`rate-limit.middleware.ts`)
