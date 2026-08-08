@@ -51,9 +51,11 @@ export async function loginController(
     if (result.mfaRequired) {
       res.status(200).json({
         success: true,
-        mfaRequired: true,
-        userId: result.userId,
-        message: result.message,
+        data: {
+          mfaRequired: true,
+          userId: result.userId,
+          message: result.message,
+        },
       });
       return;
     }

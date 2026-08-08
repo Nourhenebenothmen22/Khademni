@@ -13,7 +13,8 @@ export interface RegisterPayload {
 }
 
 export interface MfaLoginPayload {
-  mfaToken: string;
+  userId?: string;
+  mfaToken?: string;
   code: string;
 }
 
@@ -45,6 +46,7 @@ export interface AuthSuccessData {
   refreshToken?: string;
   mfaRequired?: boolean;
   mfaToken?: string;
+  userId?: string;
 }
 
 export async function getCsrfToken(): Promise<string> {
@@ -71,9 +73,10 @@ export async function loginUser(payload: LoginPayload): Promise<ApiResponse<Auth
 }
 
 export async function loginMfa(payload: MfaLoginPayload): Promise<ApiResponse<AuthSuccessData>> {
+  const userId = payload.userId || payload.mfaToken;
   const res = await apiRequest<AuthSuccessData>("/auth/mfa/login", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ userId, code: payload.code }),
   });
 
   if (res.data?.accessToken) {

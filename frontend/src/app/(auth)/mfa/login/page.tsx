@@ -8,9 +8,10 @@ import { Header } from "@/components/layout/header";
 import { toast } from "sonner";
 import { ShieldCheck, KeyRound } from "lucide-react";
 
-export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{ mfaToken?: string }> }) {
+export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{ userId?: string; mfaToken?: string }> }) {
   const router = useRouter();
-  const { mfaToken } = use(searchParams);
+  const { userId, mfaToken } = use(searchParams);
+  const activeUserId = userId || mfaToken;
   const { setAuthUser } = useAuth();
 
   const [code, setCode] = useState("");
@@ -18,15 +19,15 @@ export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mfaToken) {
-      toast.error("Invalid MFA session token");
+    if (!activeUserId) {
+      toast.error("Invalid MFA session");
       router.push("/login");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await loginMfa({ mfaToken, code });
+      const res = await loginMfa({ userId: activeUserId, code });
       if (res.success && res.data?.user) {
         setAuthUser(res.data.user, res.data.accessToken);
         toast.success("MFA authentication successful!");
