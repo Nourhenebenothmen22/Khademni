@@ -1,62 +1,63 @@
 import type { ISemanticProvider, SemanticEmbeddingResult } from "../semantic-provider.interface.js";
 import { TfidfSemanticProvider } from "./tfidf-semantic.provider.js";
+import { OnnxSemanticProvider } from "./onnx-semantic.provider.js";
+import { prisma } from "../../../lib/prisma.js";
+import { logger } from "../../../lib/logger.js";
 
 /**
  * PostgreSQL pgvector / Dense Vector Semantic Provider.
  *
- * Implements Phase 3 Production Vector Semantic Search:
- * - Generates normalized vector representations.
- * - Performs high-speed vector cosine similarity search.
- * - Supports large-scale candidate ranking (100k+ CVs).
- * - Falls back to TF-IDF if pgvector extension is unconfigured in local DB environment.
+ * Implements real 384-dimensional dense vector embeddings via ONNX model engine,
+ * executing raw SQL cosine similarity queries when pgvector is enabled in DB,
+ * or gracefully falling back to TF-IDF when unconfigured.
  */
 export class PgVectorSemanticProvider implements ISemanticProvider {
-  public readonly name = "pgvector-hsw";
+  public readonly name = "pgvector-hnsw";
   private fallbackProvider = new TfidfSemanticProvider();
-
-  /**
-   * Generates dense normalized vector embedding for text.
-   */
-  private generateVectorEmbedding(text: string, dimension = 128): number[] {
-    const tokens = text.toLowerCase().replace(/[^a-z0-9]/g, " ").split(/\s+/).filter(Boolean);
-    const vector = new Array(dimension).fill(0);
-
-    for (const token of tokens) {
-      let hash = 0;
-      for (let i = 0; i < token.length; i++) {
-        hash = (hash << 5) - hash + token.charCodeAt(i);
-        hash |= 0;
-      }
-      const index = Math.abs(hash) % dimension;
-      vector[index] += 1;
-    }
-
-    // L2 Normalize vector
-    const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-    if (norm === 0) return vector;
-    return vector.map((val) => Math.round((val / norm) * 10000) / 10000);
-  }
-
-  /**
-   * Computes Cosine Similarity between two dense normalized vectors.
-   */
-  private computeVectorCosineSimilarity(v1: number[], v2: number[]): number {
-    let dotProduct = 0;
-    for (let i = 0; i < Math.min(v1.length, v2.length); i++) {
-      dotProduct += (v1[i] ?? 0) * (v2[i] ?? 0);
-    }
-    return Math.max(0, Math.min(1, dotProduct));
-  }
+  private embedder = new OnnxSemanticProvider();
 
   public async computeSimilarity(
     jobText: string,
     candidateText: string,
   ): Promise<SemanticEmbeddingResult> {
     try {
-      const jobVector = this.generateVectorEmbedding(jobText);
-      const candidateVector = this.generateVectorEmbedding(candidateText);
+      const jobVector = await this.embedder.generateVector(jobText);
+      const candidateVector = await this.embedder.generateVector(candidateText);
 
-      const cosineSim = this.computeVectorCosineSimilarity(jobVector, candidateVector);
+      if (!jobVector || !candidateVector || jobVector.length === 0 || candidateVector.length === 0) {
+        throw new Error("Failed to generate dense vector embeddings");
+      }
+
+      const formattedJobVec = `[${jobVector.join(",")}]`;
+      const formattedCandVec = `[${candidateVector.join(",")}]`;
+
+      let cosineSim = 0;
+      let isDbPgvectorUsed = false;
+
+      try {
+        const queryResult = await prisma.$queryRaw<Array<{ similarity: number }>>`
+          SELECT 1 - (${formattedJobVec}::vector <=> ${formattedCandVec}::vector) AS similarity;
+        `;
+        if (queryResult && queryResult[0] && typeof queryResult[0].similarity === "number") {
+          cosineSim = Math.max(0, Math.min(1, queryResult[0].similarity));
+          isDbPgvectorUsed = true;
+        }
+      } catch {
+        // Local DB instance does not have pgvector extension installed, compute in JS
+        let dotProduct = 0;
+        let norm1 = 0;
+        let norm2 = 0;
+        for (let i = 0; i < Math.min(jobVector.length, candidateVector.length); i++) {
+          const v1 = jobVector[i] ?? 0;
+          const v2 = candidateVector[i] ?? 0;
+          dotProduct += v1 * v2;
+          norm1 += v1 * v1;
+          norm2 += v2 * v2;
+        }
+        const denom = Math.sqrt(norm1) * Math.sqrt(norm2);
+        cosineSim = denom > 0 ? Math.max(0, Math.min(1, dotProduct / denom)) : 0;
+      }
+
       const similarityScore = Math.min(100, Math.round(cosineSim * 100 * 100) / 100);
 
       return {
@@ -65,12 +66,19 @@ export class PgVectorSemanticProvider implements ISemanticProvider {
         providerName: this.name,
         metadata: {
           vectorDimension: jobVector.length,
-          pgvectorActive: true,
-          hnswIndexUsed: true,
+          pgvectorActive: isDbPgvectorUsed,
+          hnswIndexUsed: isDbPgvectorUsed,
+          denseEmbeddingModel: "Xenova/all-MiniLM-L6-v2",
         },
       };
-    } catch {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      logger.warn(
+        { err: message },
+        "PGVector execution failed, falling back to TF-IDF semantic provider.",
+      );
       return this.fallbackProvider.computeSimilarity(jobText, candidateText);
     }
   }
 }
+

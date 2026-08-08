@@ -2,36 +2,29 @@ import type { ISemanticProvider } from "./semantic-provider.interface.js";
 import { TfidfSemanticProvider } from "./providers/tfidf-semantic.provider.js";
 import { PgVectorSemanticProvider } from "./providers/pgvector-semantic.provider.js";
 import { OnnxSemanticProvider } from "./providers/onnx-semantic.provider.js";
+import { env } from "../../config/env.js";
 
 const pgVectorProvider = new PgVectorSemanticProvider();
 const tfidfProvider = new TfidfSemanticProvider();
 const onnxProvider = new OnnxSemanticProvider();
 
-const providersMap: Record<string, ISemanticProvider> = {
-  pgvector: pgVectorProvider,
-  vector: pgVectorProvider,
-  hnsw: pgVectorProvider,
-  tfidf: tfidfProvider,
-  onnx: onnxProvider,
-  transformer: onnxProvider,
-};
-
 /**
- * Resolves the appropriate semantic embedding provider dynamically based on model algorithm key.
- * Defaults to PgVectorSemanticProvider for high-speed vector similarity.
+ * Resolves the appropriate semantic embedding provider dynamically based on model algorithm key
+ * or env.SEMANTIC_PROVIDER configuration.
  */
 export function getSemanticProvider(algorithmKey?: string): ISemanticProvider {
-  if (!algorithmKey) {
+  const targetKey = (algorithmKey || env.SEMANTIC_PROVIDER).toLowerCase();
+
+  if (targetKey.includes("onnx") || targetKey.includes("transformer")) {
+    return onnxProvider;
+  }
+  if (targetKey.includes("tfidf")) {
+    return tfidfProvider;
+  }
+  if (targetKey.includes("pgvector") || targetKey.includes("vector") || targetKey.includes("hnsw")) {
     return pgVectorProvider;
   }
 
-  const normalized = algorithmKey.toLowerCase();
-  if (normalized.includes("onnx") || normalized.includes("transformer")) {
-    return onnxProvider;
-  }
-  if (normalized.includes("tfidf")) {
-    return tfidfProvider;
-  }
-
-  return providersMap[normalized] || pgVectorProvider;
+  return pgVectorProvider;
 }
+

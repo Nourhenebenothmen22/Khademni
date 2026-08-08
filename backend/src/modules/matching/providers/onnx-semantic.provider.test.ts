@@ -29,7 +29,8 @@ describe("OnnxSemanticProvider", () => {
     expect(result.similarityScore).toBeLessThanOrEqual(100);
     expect(["onnx-transformer", "tfidf-fallback"]).toContain(result.providerName);
     if (result.providerName === "onnx-transformer") {
-      expect(result.metadata?.inputLengthJob).toBeLessThanOrEqual(2048);
+      expect(result.metadata?.inputLengthJob).toBeGreaterThan(0);
+      expect(result.metadata?.chunkingMode).toBe("mean-pooling-multi-chunk");
     }
   }, 60000);
 });

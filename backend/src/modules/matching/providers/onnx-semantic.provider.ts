@@ -2,10 +2,11 @@ import type { ISemanticProvider, SemanticEmbeddingResult } from "../semantic-pro
 import { TfidfSemanticProvider } from "./tfidf-semantic.provider.js";
 import { logger } from "../../../lib/logger.js";
 
-let pipelinePromise: Promise<any> | null = null;
-const MAX_INPUT_CHARACTERS = 2048; // Max ~350-400 words aligned with 512-token context limit of all-MiniLM-L6-v2
+type ExtractorFunction = (text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ data: Float32Array | number[] }>;
 
-async function getExtractorPipeline() {
+let pipelinePromise: Promise<ExtractorFunction> | null = null;
+
+async function getExtractorPipeline(): Promise<ExtractorFunction> {
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
       const { pipeline, env } = await import("@xenova/transformers");
@@ -14,11 +15,11 @@ async function getExtractorPipeline() {
 
       const pipelineCall = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
 
-      const timeoutCall = new Promise((_, reject) =>
+      const timeoutCall = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("ONNX model load timeout (5000ms limit reached)")), 5000),
       );
 
-      return Promise.race([pipelineCall, timeoutCall]);
+      return Promise.race([pipelineCall, timeoutCall]) as Promise<ExtractorFunction>;
     })().catch((error) => {
       pipelinePromise = null;
       throw error;
@@ -30,6 +31,41 @@ async function getExtractorPipeline() {
 export class OnnxSemanticProvider implements ISemanticProvider {
   public readonly name = "onnx-transformer";
   private fallbackProvider = new TfidfSemanticProvider();
+
+  public async generateVector(text: string): Promise<number[]> {
+    const extractor = await getExtractorPipeline();
+    const chunkSize = 1500;
+    const chunks: string[] = [];
+
+    const cleanText = text.trim();
+    if (!cleanText) return new Array(384).fill(0);
+
+    for (let i = 0; i < cleanText.length; i += chunkSize) {
+      chunks.push(cleanText.substring(i, i + chunkSize));
+    }
+
+    const chunkVectors: number[][] = [];
+    for (const chunk of chunks.slice(0, 4)) {
+      const output = await extractor(chunk, { pooling: "mean", normalize: true });
+      chunkVectors.push(Array.from(output.data as Float32Array));
+    }
+
+    const firstChunk = chunkVectors[0];
+    if (!firstChunk) return new Array(384).fill(0);
+
+    const dimension = firstChunk.length;
+    const finalVector = new Array(dimension).fill(0);
+
+    for (let i = 0; i < dimension; i++) {
+      let sum = 0;
+      for (const vec of chunkVectors) {
+        sum += vec[i] ?? 0;
+      }
+      finalVector[i] = sum / chunkVectors.length;
+    }
+
+    return finalVector;
+  }
 
   private computeCosineSimilarity(v1: number[], v2: number[]): number {
     let dotProduct = 0;
@@ -55,17 +91,8 @@ export class OnnxSemanticProvider implements ISemanticProvider {
     candidateText: string,
   ): Promise<SemanticEmbeddingResult> {
     try {
-      const extractor = await getExtractorPipeline();
-
-      // Truncate to MAX_INPUT_CHARACTERS (2048) to fit 512-token transformer context without memory bloat
-      const truncatedJob = jobText.substring(0, MAX_INPUT_CHARACTERS);
-      const truncatedCandidate = candidateText.substring(0, MAX_INPUT_CHARACTERS);
-
-      const jobOutput = await extractor(truncatedJob, { pooling: "mean", normalize: true });
-      const candidateOutput = await extractor(truncatedCandidate, { pooling: "mean", normalize: true });
-
-      const jobVector = Array.from(jobOutput.data as Float32Array) as number[];
-      const candidateVector = Array.from(candidateOutput.data as Float32Array) as number[];
+      const jobVector = await this.generateVector(jobText);
+      const candidateVector = await this.generateVector(candidateText);
 
       const cosineSim = this.computeCosineSimilarity(jobVector, candidateVector);
       const similarityScore = Math.min(100, Math.round(cosineSim * 100 * 100) / 100);
@@ -78,13 +105,15 @@ export class OnnxSemanticProvider implements ISemanticProvider {
           model: "Xenova/all-MiniLM-L6-v2",
           vectorDimension: jobVector.length,
           onnxActive: true,
-          inputLengthJob: truncatedJob.length,
-          inputLengthCandidate: truncatedCandidate.length,
+          inputLengthJob: jobText.length,
+          inputLengthCandidate: candidateText.length,
+          chunkingMode: "mean-pooling-multi-chunk",
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
       logger.warn(
-        { err: err?.message },
+        { err: message },
         "ONNX transformer model execution failed, falling back to TF-IDF semantic provider.",
       );
       return this.fallbackProvider.computeSimilarity(jobText, candidateText);

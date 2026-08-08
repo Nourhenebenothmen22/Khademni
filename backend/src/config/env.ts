@@ -53,6 +53,12 @@ const envSchema = z
     // Application URLs (for email links)
     APP_URL: z.string().default("http://localhost:3000"),
     FRONTEND_URL: z.string().default("http://localhost:5173"),
+
+    // AI Matching Engine Configuration
+    SEMANTIC_PROVIDER: z.enum(["pgvector", "onnx", "tfidf"]).default("pgvector"),
+    ONNX_MODEL_NAME: z.string().default("Xenova/all-MiniLM-L6-v2"),
+    ONNX_MAX_CHARACTERS: z.coerce.number().default(4096),
+    PGVECTOR_DIMENSION: z.coerce.number().default(384),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === "production") {
