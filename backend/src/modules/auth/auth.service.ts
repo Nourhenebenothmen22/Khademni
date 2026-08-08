@@ -533,6 +533,8 @@ export async function resetPassword(token: string, newPassword: string) {
         passwordResetTokenHash: null,
         passwordResetExpiresAt: null,
         passwordChangedAt: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
       },
     }),
     prisma.authSession.updateMany({
