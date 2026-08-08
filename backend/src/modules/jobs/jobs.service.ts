@@ -62,7 +62,7 @@ export async function getJobPosts(query: JobPostQuery) {
     (!query.page || query.page === 1);
 
   if (isDefaultPublishedList) {
-    const cachedList = await getCache<object>(PUBLISHED_JOBS_CACHE_KEY);
+    const cachedList = await getCache<{ items: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(PUBLISHED_JOBS_CACHE_KEY);
     if (cachedList) return cachedList;
   }
 

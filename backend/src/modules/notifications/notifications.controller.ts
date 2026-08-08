@@ -2,15 +2,18 @@ import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../../common/middlewares/auth.middleware.js';
 import * as notificationsService from './notifications.service.js';
 
+import type { NotificationQuery } from '../../common/validators/notification.validators.js';
+
 export async function getNotificationsController(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
+    const query = (req as unknown as { validatedQuery: NotificationQuery }).validatedQuery || (req.query as unknown as NotificationQuery);
     const result = await notificationsService.getUserNotifications(
       req.user!.userId,
-      req.query as unknown as Record<string, unknown>,
+      query,
     );
     res.status(200).json({ success: true, data: result.items, meta: result.pagination });
   } catch (error) {
