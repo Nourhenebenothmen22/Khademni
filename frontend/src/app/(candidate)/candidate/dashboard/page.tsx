@@ -290,7 +290,7 @@ export default function CandidateDashboardPage() {
 
               <div className="space-y-2 pt-1">
                 {recommendedJobs.length > 0 ? (
-                  recommendedJobs.map((job) => (
+                  recommendedJobs.map((job: JobPost) => (
                     <Link
                       key={job.id}
                       href={`/jobs/${job.id}`}
