@@ -28,13 +28,17 @@ async function main() {
   const passwordHash = await argon2.hash("AdminPassword123!");
   const candidatePasswordHash = await argon2.hash("CandidatePassword123!");
 
-  // Seed Admin User
+  // Seed Admin User (Nourhene)
   const admin = await prisma.user.upsert({
-    where: { email: "admin@khademni.com" },
-    update: { organizationId: org.id },
+    where: { email: "benothmennourhene9@gmail.com" },
+    update: {
+      role: "ADMIN",
+      organizationId: org.id,
+      isEmailVerified: true,
+    },
     create: {
-      email: "admin@khademni.com",
-      fullName: "Admin Officer",
+      email: "benothmennourhene9@gmail.com",
+      fullName: "Nourhene Ben Othmen",
       passwordHash,
       role: "ADMIN",
       isEmailVerified: true,
