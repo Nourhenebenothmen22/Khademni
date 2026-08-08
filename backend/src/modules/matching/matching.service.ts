@@ -251,7 +251,7 @@ export async function runMatching(
     let rulesScore = 0;
     let totalRuleWeight = 0;
     let earnedRuleWeight = 0;
-    const ruleResults: Array<{ name: string; type: string; weight: number; matched: boolean; explanation: string }> = [];
+    const ruleResults: Array<{ ruleId?: string; name?: string; ruleName?: string; type: string; weight: number; matched: boolean; explanation: string }> = [];
 
     const activeRules = application.jobPost.matchingRules.filter((r) => r.isActive);
 
