@@ -17,3 +17,5 @@ export * from "./application-score.validators.js";
 export * from "./application-status-history.validators.js";
 export * from "./audit-log.validators.js";
 export * from './notification.validators.js';
+export * from "./interview.validators.js";
+

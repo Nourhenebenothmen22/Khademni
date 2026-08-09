@@ -30,6 +30,7 @@ import { matchingRouter } from "./modules/matching/matching.routes.js";
 import { aiModelsRouter } from "./modules/ai-models/ai-models.routes.js";
 import { notificationsRouter } from "./modules/notifications/notifications.routes.js";
 import { organizationsRouter } from "./modules/organizations/organizations.routes.js";
+import { interviewsRouter } from "./modules/interviews/interviews.routes.js";
 import { applyToJobController } from "./modules/applications/applications.controller.js";
 
 const app = express();
@@ -89,6 +90,7 @@ app.use("/api/v1/matching", matchingRouter);
 app.use("/api/v1/ai-models", aiModelsRouter);
 app.use("/api/v1/notifications", notificationsRouter);
 app.use("/api/v1/organizations", organizationsRouter);
+app.use("/api/v1/interviews", interviewsRouter);
 
 
 // Job Application Upload Route

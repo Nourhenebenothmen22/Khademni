@@ -343,6 +343,83 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/interviews",
+  tags: ["Interviews"],
+  summary: "Schedule a candidate interview and send Brevo invitations",
+  security: [{ bearerAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: validators.scheduleInterviewSchema },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Interview scheduled and Brevo invitation emails dispatched" },
+    400: { description: "Validation error" },
+    401: { description: "Unauthorized" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/interviews",
+  tags: ["Interviews"],
+  summary: "List organization interviews with filters",
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: "Paginated interviews list" },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/v1/interviews/{id}/scorecards",
+  tags: ["Interviews"],
+  summary: "Submit evaluator scorecard ratings for an interview",
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: "id",
+      in: "path",
+      required: true,
+      schema: { type: "string" },
+    },
+  ],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: validators.submitScorecardSchema },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Scorecard submitted successfully" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/interviews/{id}/calendar.ics",
+  tags: ["Interviews"],
+  summary: "Download iCal .ics calendar event file",
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: "id",
+      in: "path",
+      required: true,
+      schema: { type: "string" },
+    },
+  ],
+  responses: {
+    200: { description: "RFC 5545 iCal file stream" },
+  },
+});
+
+
 
 const generator = new OpenApiGeneratorV3(registry.definitions);
 
