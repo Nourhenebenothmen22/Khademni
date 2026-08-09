@@ -70,10 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const logout = useCallback(async () => {
-    await logoutUser();
+    try {
+      await logoutUser();
+    } catch {
+      // Ignore logout errors
+    }
     setActiveOrganizationId(null);
     setUser(null);
     setAccessToken(null);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   }, []);
 
   return (
