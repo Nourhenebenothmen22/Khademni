@@ -12,6 +12,7 @@ export type MatchingJobStatusType = "pending" | "processing" | "completed" | "fa
 export interface MatchingJobState {
   queueJobId: string;
   jobPostId: string;
+  organizationId?: string | null;
   modelId: string;
   status: MatchingJobStatusType;
   totalApplications: number;
@@ -135,6 +136,7 @@ export async function enqueueJobMatching(
   const initialState: MatchingJobState = {
     queueJobId,
     jobPostId,
+    organizationId: job.organizationId,
     modelId: activeModelId,
     status: "pending",
     totalApplications: job.applications.length,
@@ -228,10 +230,16 @@ async function processMatchingQueueJob(
 /**
  * Returns the real-time status and progress of an enqueued background matching job.
  */
-export async function getMatchingJobStatus(queueJobId: string): Promise<MatchingJobState> {
+export async function getMatchingJobStatus(
+  queueJobId: string,
+  requesterOrgId?: string,
+): Promise<MatchingJobState> {
   const state = await loadJobState(queueJobId);
   if (!state) {
     throw new AppError("Matching queue job not found.", 404);
+  }
+  if (requesterOrgId && state.organizationId && state.organizationId !== requesterOrgId) {
+    throw new AppError("Matching queue job not found or access denied.", 404);
   }
   return state;
 }

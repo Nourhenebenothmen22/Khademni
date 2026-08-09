@@ -38,7 +38,7 @@ export async function triggerJobMatchingController(
     const { modelId } = req.body;
     const organizationId = getOrganizationId(req);
     const runs = await matchingService.runMatchingForJob(jobPostId, modelId, organizationId);
-    res.status(200).json({ success: true, data: runs });
+    res.status(200).json({ success: true, data: { processedCount: runs.length, runs } });
   } catch (error) {
     next(error);
   }
@@ -67,7 +67,8 @@ export async function getMatchingJobStatusController(
 ): Promise<void> {
   try {
     const { queueJobId } = req.params as { queueJobId: string };
-    const state = await queueService.getMatchingJobStatus(queueJobId);
+    const organizationId = getOrganizationId(req);
+    const state = await queueService.getMatchingJobStatus(queueJobId, organizationId);
     res.status(200).json({ success: true, data: state });
   } catch (error) {
     next(error);
