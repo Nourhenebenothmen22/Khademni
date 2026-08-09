@@ -19,6 +19,7 @@ export const requireTenantAccess = (
   const requestedOrgId = (
     req.params.organizationId ||
     req.params.orgId ||
+    (req.baseUrl?.includes("/organizations") ? req.params.id : undefined) ||
     req.query.organizationId ||
     req.query.orgId ||
     req.headers["x-organization-id"] ||
