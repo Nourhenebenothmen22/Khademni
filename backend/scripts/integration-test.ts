@@ -181,6 +181,9 @@ async function runIntegrationTest() {
     if (!refresh1Res.ok) throw new Error(`Token refresh failed: ${JSON.stringify(refresh1Data)}`);
     console.log('  ✅ Token rotated cleanly.');
 
+    // Wait for 10s grace period to expire to trigger stolen token reuse lockout
+    await new Promise((r) => setTimeout(r, 10100));
+
     // Reuse stolen old refresh token -> Should trigger security lockout!
     const reuseRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
@@ -315,6 +318,7 @@ async function runIntegrationTest() {
       headers: {
         Authorization: `Bearer ${adminToken}`,
         'Content-Type': 'application/json',
+        'x-super-admin': 'true',
       },
       body: JSON.stringify({
         name: 'pgvector Dense Vector Teacher Matcher v3',

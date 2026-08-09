@@ -320,7 +320,7 @@ export async function refreshSession(
 ) {
   const payload = await verifyRefreshToken(refreshToken);
   const tokenHash = hashToken(refreshToken);
-  const GRACE_PERIOD_MS = 0; // Immediate breach detection on token reuse
+  const GRACE_PERIOD_MS = 10000; // 10s grace period for concurrent retries
 
 
   return prisma.$transaction(async (tx) => {
