@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { Header } from "@/components/layout/header";
+import { getApiOrigin } from "@/lib/api/client";
 
 export default function ApiDocsPage() {
   const [spec, setSpec] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:3000/docs.json")
+    fetch(`${getApiOrigin()}/docs.json`)
       .then((res) => res.json())
       .then((data) => {
         setSpec(data);

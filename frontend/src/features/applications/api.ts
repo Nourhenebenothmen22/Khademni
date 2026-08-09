@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/client";
+import { apiRequest, API_BASE_URL } from "@/lib/api/client";
 import { ApiResponse, Application, ApplicationStatus } from "@/types/backend";
 
 export interface ApplicationQueryFilters {
@@ -72,6 +72,5 @@ export async function deleteApplication(id: string): Promise<ApiResponse<{ messa
 }
 
 export function getDocumentDownloadUrl(applicationId: string, docId: string): string {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
   return `${API_BASE_URL}/applications/${applicationId}/documents/${docId}/download`;
 }
