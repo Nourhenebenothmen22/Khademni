@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchMyApplications, withdrawApplication } from "@/features/applications/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { toast } from "sonner";
 import { FileText, Search, ChevronDown, MapPin, Building, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -14,6 +15,7 @@ export default function CandidateApplicationsPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [withdrawTargetId, setWithdrawTargetId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["myApplicationsList", page],
@@ -25,7 +27,7 @@ export default function CandidateApplicationsPage() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success("Application withdrawn successfully");
-        queryClient.invalidateQueries({ queryKey: ["myApplicationsList"] });
+        queryClient.invalidateQueries({ queryKey: ["myApplications"] });
       } else {
         toast.error(res.message || "Could not withdraw application");
       }
@@ -47,6 +49,21 @@ export default function CandidateApplicationsPage() {
   return (
     <DashboardShell requiredRole="CANDIDATE">
       <div className="space-y-6 max-w-5xl">
+        <ConfirmModal
+          isOpen={!!withdrawTargetId}
+          onClose={() => setWithdrawTargetId(null)}
+          onConfirm={() => {
+            if (withdrawTargetId) {
+              withdrawMutation.mutate(withdrawTargetId, {
+                onSettled: () => setWithdrawTargetId(null),
+              });
+            }
+          }}
+          title="Withdraw Application"
+          description="Are you sure you want to withdraw this application? This action cannot be reversed."
+          confirmText="Withdraw Application"
+          isPending={withdrawMutation.isPending}
+        />
         {/* Page Header */}
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Applications</h1>
@@ -180,11 +197,7 @@ export default function CandidateApplicationsPage() {
 
                     {app.status !== "WITHDRAWN" && app.status !== "REJECTED" && app.status !== "ACCEPTED" && (
                       <button
-                        onClick={() => {
-                          if (confirm("Are you sure you want to withdraw this application?")) {
-                            withdrawMutation.mutate(app.id);
-                          }
-                        }}
+                        onClick={() => setWithdrawTargetId(app.id)}
                         disabled={withdrawMutation.isPending}
                         className="text-xs font-bold text-rose-600 hover:underline px-2"
                       >

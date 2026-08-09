@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { resetPassword } from "@/features/auth/api";
 import { Header } from "@/components/layout/header";
 import { toast } from "sonner";
+import { PasswordInput } from "@/components/ui/input";
 import { Lock, CheckCircle2 } from "lucide-react";
 
 export default function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
@@ -52,7 +53,7 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
               <p className="text-sm text-slate-600">Your password has been updated. You can now sign in with your new password.</p>
               <button
                 onClick={() => router.push("/login")}
-                className="mt-4 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="mt-4 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 text-center"
               >
                 Sign In
               </button>
@@ -65,21 +66,15 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
               </div>
 
               <form onSubmit={handleReset} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="password"
-                      required
-                      minLength={8}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Minimum 8 characters"
-                      className="w-full rounded-lg border border-slate-300 pl-10 pr-4 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
+                <PasswordInput
+                  label="New Password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 8 characters"
+                  icon={Lock}
+                />
 
                 <button
                   type="submit"

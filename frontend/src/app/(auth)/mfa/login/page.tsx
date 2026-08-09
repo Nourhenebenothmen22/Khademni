@@ -60,7 +60,7 @@ export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{
 
           <form onSubmit={handleMfaSubmit} className="space-y-4">
             <div className="relative">
-              <KeyRound className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 required
@@ -68,7 +68,7 @@ export default function MfaLoginPage({ searchParams }: { searchParams: Promise<{
                 value={code}
                 onChange={(e) => setCode(e.target.value.trim())}
                 placeholder="123456"
-                className="w-full text-center text-lg font-mono tracking-widest rounded-lg border border-slate-300 pl-10 pr-4 py-2.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full text-center text-lg font-mono tracking-widest rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 pl-10 pr-4 py-2.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
 

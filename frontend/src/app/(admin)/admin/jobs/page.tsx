@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJobs, deleteJob } from "@/features/jobs/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { toast } from "sonner";
 import { Plus, Search, Edit3, Trash2, Briefcase } from "lucide-react";
 
@@ -13,6 +14,7 @@ export default function AdminJobsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["adminJobs", page, search],
@@ -37,6 +39,21 @@ export default function AdminJobsPage() {
   return (
     <DashboardShell requiredRole="ADMIN">
       <div className="space-y-6">
+        <ConfirmModal
+          isOpen={!!deleteTargetId}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => {
+            if (deleteTargetId) {
+              deleteMutation.mutate(deleteTargetId, {
+                onSettled: () => setDeleteTargetId(null),
+              });
+            }
+          }}
+          title="Delete Job Opening"
+          description="Are you sure you want to delete this job posting? This action will remove all associated keywords and rules."
+          confirmText="Delete Job"
+          isPending={deleteMutation.isPending}
+        />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Job Openings</h1>
@@ -112,11 +129,7 @@ export default function AdminJobsPage() {
                         <Edit3 className="h-3.5 w-3.5" /> Edit & Rules
                       </Link>
                       <button
-                        onClick={() => {
-                          if (confirm("Delete this job post?")) {
-                            deleteMutation.mutate(job.id);
-                          }
-                        }}
+                        onClick={() => setDeleteTargetId(job.id)}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:underline"
                       >
                         <Trash2 className="h-3.5 w-3.5" /> Delete

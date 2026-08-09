@@ -5,6 +5,7 @@ import Link from "next/link";
 import { requestPasswordReset } from "@/features/auth/api";
 import { Header } from "@/components/layout/header";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Mail, CheckCircle2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -46,7 +47,7 @@ export default function ForgotPasswordPage() {
               </p>
               <Link
                 href="/login"
-                className="mt-4 inline-block w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="mt-4 inline-block w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 text-center"
               >
                 Back to Sign In
               </Link>
@@ -59,20 +60,15 @@ export default function ForgotPasswordPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="w-full rounded-lg border border-slate-300 pl-10 pr-4 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
+                <Input
+                  label="Email Address"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  icon={Mail}
+                />
 
                 <button
                   type="submit"

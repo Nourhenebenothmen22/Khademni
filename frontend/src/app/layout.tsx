@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { ReactQueryProvider } from "@/lib/api/query-provider";
 
@@ -19,7 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full antialiased text-slate-900 bg-slate-50`}>
-        <ReactQueryProvider>{children}</ReactQueryProvider>
+        <ReactQueryProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </ReactQueryProvider>
       </body>
     </html>
   );

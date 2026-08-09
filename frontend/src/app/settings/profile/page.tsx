@@ -18,6 +18,9 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { Input, PasswordInput } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+
 export default function ProfileSettingsPage() {
   const { user, refreshUser } = useAuth();
 
@@ -29,6 +32,7 @@ export default function ProfileSettingsPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [confirmDeleteAvatar, setConfirmDeleteAvatar] = useState(false);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,7 +60,6 @@ export default function ProfileSettingsPage() {
   };
 
   const handleDeleteAvatar = async () => {
-    if (!confirm("Are you sure you want to remove your profile photo?")) return;
     setAvatarLoading(true);
     try {
       const res = await deleteUserAvatar();
@@ -70,6 +73,7 @@ export default function ProfileSettingsPage() {
       toast.error((err as Error).message || "Avatar removal error");
     } finally {
       setAvatarLoading(false);
+      setConfirmDeleteAvatar(false);
     }
   };
 
@@ -123,7 +127,7 @@ export default function ProfileSettingsPage() {
           </p>
         </div>
 
-        {/* 2-Column Layout Grid matching screenshot */}
+        {/* 2-Column Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Forms Column (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
@@ -172,7 +176,7 @@ export default function ProfileSettingsPage() {
                       {user?.avatarUrl && (
                         <button
                           type="button"
-                          onClick={handleDeleteAvatar}
+                          onClick={() => setConfirmDeleteAvatar(true)}
                           disabled={avatarLoading}
                           className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-extrabold text-rose-700 hover:bg-rose-100"
                         >
@@ -184,22 +188,25 @@ export default function ProfileSettingsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                    FULL NAME <span className="text-[#282276]">* (EDITABLE)</span>
-                  </label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullNameInput(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 pl-10 pr-4 py-2.5 text-sm font-semibold text-slate-900 focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 transition-all bg-white"
-                      placeholder="Nourhene ben othmen"
-                    />
-                  </div>
-                </div>
+                <ConfirmModal
+                  isOpen={confirmDeleteAvatar}
+                  onClose={() => setConfirmDeleteAvatar(false)}
+                  onConfirm={handleDeleteAvatar}
+                  title="Remove Profile Photo"
+                  description="Are you sure you want to remove your profile photo?"
+                  confirmText="Remove Photo"
+                  isPending={avatarLoading}
+                />
+
+                <Input
+                  label="FULL NAME * (EDITABLE)"
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullNameInput(e.target.value)}
+                  placeholder="Enter full name"
+                  icon={UserIcon}
+                />
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -210,15 +217,12 @@ export default function ProfileSettingsPage() {
                       <Lock className="h-3 w-3" /> MANAGED & READ-ONLY
                     </span>
                   </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="email"
-                      disabled
-                      value={user?.email || "nourhenbenoth37@gmail.com"}
-                      className="w-full rounded-xl border border-slate-200 bg-[#eeeef4] pl-10 pr-4 py-2.5 text-sm font-semibold text-slate-600 cursor-not-allowed select-none"
-                    />
-                  </div>
+                  <Input
+                    type="email"
+                    disabled
+                    value={user?.email || ""}
+                    icon={Mail}
+                  />
                 </div>
               </div>
 
@@ -249,34 +253,22 @@ export default function ProfileSettingsPage() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                    CURRENT PASSWORD
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 bg-white"
-                    placeholder="••••••••••••"
-                  />
-                </div>
+                <PasswordInput
+                  label="CURRENT PASSWORD"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                />
 
-                <div>
-                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-700 mb-1.5">
-                    NEW PASSWORD
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium focus:border-[#282276] focus:ring-2 focus:ring-[#282276]/20 bg-white"
-                    placeholder="Minimum 8 characters"
-                  />
-                </div>
+                <PasswordInput
+                  label="NEW PASSWORD"
+                  required
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimum 8 characters"
+                />
               </div>
 
               <div className="pt-2 flex justify-end">
@@ -325,7 +317,7 @@ export default function ProfileSettingsPage() {
               </Link>
             </div>
 
-            {/* Account Overview Card 2 (Role & Email Status) */}
+            {/* Account Overview Card 2 */}
             <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3.5 text-xs">
               <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
                 <Circle className="h-3.5 w-3.5 text-slate-400" />

@@ -129,7 +129,7 @@ export default function MfaSetupPage() {
                   </div>
 
                   <div className="relative max-w-xs">
-                    <KeyRound className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                    <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
                       required
@@ -137,7 +137,7 @@ export default function MfaSetupPage() {
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="123456"
-                      className="w-full font-mono text-center tracking-widest text-lg font-bold rounded-xl border border-slate-300 pl-10 pr-4 py-2.5 text-slate-900 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-full font-mono text-center tracking-widest text-lg font-bold rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 pl-10 pr-4 py-2.5 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                     />
                   </div>
 
