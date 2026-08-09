@@ -10,6 +10,7 @@ export interface TokenPayload {
   role: string;
   organizationId?: string;
   isMfaPending?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 export async function signAccessToken(payload: TokenPayload): Promise<string> {
