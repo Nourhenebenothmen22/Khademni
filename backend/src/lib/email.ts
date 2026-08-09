@@ -31,6 +31,11 @@ interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  attachments?: Array<{
+    filename: string;
+    content: string | Buffer;
+    contentType?: string;
+  }>;
 }
 
 async function sendEmail(options: EmailOptions): Promise<void> {
@@ -55,13 +60,14 @@ async function sendEmail(options: EmailOptions): Promise<void> {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      attachments: options.attachments,
     });
     logger.info(
       { messageId: info.messageId, to: options.to },
-      "Email sent successfully",
+      "Email sent successfully via Brevo SMTP",
     );
   } catch (error) {
-    logger.error({ error, to: options.to }, "Failed to send email");
+    logger.error({ error, to: options.to }, "Failed to send email via Brevo SMTP");
     // Non-blocking: do not throw — email failures should not break flows
   }
 }
@@ -287,6 +293,172 @@ export async function sendApplicationStatusEmail(
     html: renderEmailLayout("Application Status Update", content, headerSubtitle),
   });
 }
+
+export async function sendInterviewInvitationEmail(options: {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  interviewType: string;
+  startTimeFormatted: string;
+  endTimeFormatted: string;
+  timezone: string;
+  meetingUrl?: string;
+  locationDetails?: string;
+  organizationName?: string;
+  icsContent: string;
+  googleCalendarUrl?: string;
+  outlookCalendarUrl?: string;
+}): Promise<void> {
+  const safeFullName = escapeHtml(options.fullName);
+  const safeJobTitle = escapeHtml(options.jobTitle);
+  const safeOrgName = options.organizationName ? escapeHtml(options.organizationName) : undefined;
+  const safeTime = `${escapeHtml(options.startTimeFormatted)} - ${escapeHtml(options.endTimeFormatted)} (${escapeHtml(options.timezone)})`;
+  const safeLocation = options.locationDetails ? escapeHtml(options.locationDetails) : undefined;
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>You have been scheduled for a <strong>${escapeHtml(options.interviewType)}</strong> interview for the position <strong>"${safeJobTitle}"</strong>.</p>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${safeOrgName ? `
+        <tr>
+          <td style="padding-bottom: 8px; color: #64748b; font-size: 13px;">Organization:</td>
+          <td style="padding-bottom: 8px; color: #0f172a; font-size: 14px; font-weight: 600; text-align: right;">${safeOrgName}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding-bottom: 8px; color: #64748b; font-size: 13px;">Date & Time:</td>
+          <td style="padding-bottom: 8px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right;">${safeTime}</td>
+        </tr>
+        ${options.meetingUrl ? `
+        <tr>
+          <td style="color: #64748b; font-size: 13px;">Video Meeting:</td>
+          <td style="text-align: right;">
+            <a href="${options.meetingUrl}" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Join Video Call</a>
+          </td>
+        </tr>` : ""}
+        ${safeLocation ? `
+        <tr>
+          <td style="color: #64748b; font-size: 13px;">Location:</td>
+          <td style="color: #0f172a; font-size: 13px; text-align: right;">${safeLocation}</td>
+        </tr>` : ""}
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 24px 0; display: flex; gap: 12px; justify-content: center;">
+      ${options.meetingUrl ? `
+        <a href="${options.meetingUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">Join Meeting Now</a>
+      ` : ""}
+      ${options.googleCalendarUrl ? `
+        <a href="${options.googleCalendarUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 6px; font-size: 13px;">+ Add to Google Calendar</a>
+      ` : ""}
+    </div>
+
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">An iCal calendar invite file (<code>interview.ics</code>) is attached to this email so you can import this event into Apple Calendar, Outlook, or Google Calendar.</p>
+  `;
+
+  await sendEmail({
+    to: options.to,
+    subject: `Interview Scheduled: ${options.interviewType} — ${safeJobTitle}`,
+    html: renderEmailLayout("Interview Invitation", content, safeOrgName || "Recruitment Schedule"),
+    attachments: [
+      {
+        filename: "interview.ics",
+        content: options.icsContent,
+        contentType: "text/calendar; method=REQUEST",
+      },
+    ],
+  });
+}
+
+export async function sendInterviewRescheduledEmail(options: {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  newStartTimeFormatted: string;
+  newEndTimeFormatted: string;
+  timezone: string;
+  reason?: string;
+  meetingUrl?: string;
+  organizationName?: string;
+  icsContent: string;
+}): Promise<void> {
+  const safeFullName = escapeHtml(options.fullName);
+  const safeJobTitle = escapeHtml(options.jobTitle);
+  const safeTime = `${escapeHtml(options.newStartTimeFormatted)} - ${escapeHtml(options.newEndTimeFormatted)} (${escapeHtml(options.timezone)})`;
+  const safeReason = options.reason ? escapeHtml(options.reason) : undefined;
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>Your upcoming interview for <strong>"${safeJobTitle}"</strong> has been rescheduled.</p>
+    
+    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 600;">New Time:</p>
+      <p style="margin: 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${safeTime}</p>
+      ${safeReason ? `<p style="margin: 12px 0 0; color: #3b82f6; font-size: 13px;"><strong>Reason:</strong> ${safeReason}</p>` : ""}
+    </div>
+
+    ${options.meetingUrl ? `
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${options.meetingUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px;">Join Meeting Link</a>
+    </div>` : ""}
+
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">An updated calendar event file (<code>interview-update.ics</code>) is attached to update your personal calendar.</p>
+  `;
+
+  await sendEmail({
+    to: options.to,
+    subject: `Interview Rescheduled: ${safeJobTitle}`,
+    html: renderEmailLayout("Interview Rescheduled", content, options.organizationName || "Recruitment Schedule"),
+    attachments: [
+      {
+        filename: "interview-update.ics",
+        content: options.icsContent,
+        contentType: "text/calendar; method=REQUEST",
+      },
+    ],
+  });
+}
+
+export async function sendInterviewCancelledEmail(options: {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  reason: string;
+  organizationName?: string;
+  icsContent?: string;
+}): Promise<void> {
+  const safeFullName = escapeHtml(options.fullName);
+  const safeJobTitle = escapeHtml(options.jobTitle);
+  const safeReason = escapeHtml(options.reason);
+
+  const content = `
+    <p style="margin-top: 0;">Hello <strong>${safeFullName}</strong>,</p>
+    <p>Please note that your scheduled interview for the position <strong>"${safeJobTitle}"</strong> has been cancelled.</p>
+    
+    <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="margin: 0; color: #9f1239; font-size: 14px;"><strong>Reason for Cancellation:</strong> ${safeReason}</p>
+    </div>
+
+    <p style="font-size: 13px; color: #64748b;">If you have any questions regarding your application status, please reach out via the recruitment portal.</p>
+  `;
+
+  await sendEmail({
+    to: options.to,
+    subject: `Interview Cancelled: ${safeJobTitle}`,
+    html: renderEmailLayout("Interview Cancellation", content, options.organizationName || "Recruitment Schedule"),
+    attachments: options.icsContent
+      ? [
+          {
+            filename: "interview-cancel.ics",
+            content: options.icsContent,
+            contentType: "text/calendar; method=CANCEL",
+          },
+        ]
+      : undefined,
+  });
+}
+
 
 
 
