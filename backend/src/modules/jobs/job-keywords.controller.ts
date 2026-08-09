@@ -65,7 +65,7 @@ export async function removeKeywordController(
       id,
       req.user?.organizationId ?? undefined,
     );
-    res.status(200).json({ success: true, message: result.message });
+    res.status(200).json({ success: true, data: { message: result.message } });
   } catch (error) {
     next(error);
   }
