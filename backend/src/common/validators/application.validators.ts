@@ -10,6 +10,8 @@ export const applicationStatusEnum = z.enum([
   "SUBMITTED",
   "UNDER_REVIEW",
   "SHORTLISTED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEWED",
   "REJECTED",
   "ACCEPTED",
   "WITHDRAWN",
@@ -18,6 +20,8 @@ export const applicationStatusEnum = z.enum([
 export const adminSettableStatusEnum = z.enum([
   "UNDER_REVIEW",
   "SHORTLISTED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEWED",
   "REJECTED",
   "ACCEPTED",
 ]);
