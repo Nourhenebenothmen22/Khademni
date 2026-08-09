@@ -55,13 +55,12 @@ export function verifyCsrf(
     return next();
   }
 
-  // If cookie auth is used, enforce Double Submit Cookie token verification
   const cookieToken = req.cookies ? req.cookies[COOKIE_NAME] : undefined;
   const headerToken = (req.headers[HEADER_NAME] || req.headers[HEADER_NAME.toLowerCase()]) as string | undefined;
 
   if (!cookieToken || !headerToken) {
     // If no session cookies exist either, allow tokenless public POSTs (e.g. login/register)
-    if (!req.cookies || !req.cookies.access_token) {
+    if (!req.cookies || (!req.cookies.access_token && !req.cookies.refresh_token)) {
       return next();
     }
     return next(new AppError("CSRF protection error: Missing CSRF token.", 403));
