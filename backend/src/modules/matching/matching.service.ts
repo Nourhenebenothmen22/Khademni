@@ -27,21 +27,27 @@ interface ModelHyperparameters {
 /**
  * Builds a regex pattern with word boundaries (\b) and acronym support (e.g. M.A., B.S., Ph.D.)
  */
+/**
+ * Builds a regex pattern with word boundaries (\b) and acronym support (e.g. M.A., B.S., Ph.D.)
+ * Prevents false positive collisions with common natural language stopwords (e.g. French 'ma').
+ */
 function buildDegreePattern(token: string): RegExp {
-  const normalizedToken = token.trim().toLowerCase();
-  const escaped = normalizedToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const cleanToken = token.trim().replace(/\./g, "").toLowerCase();
 
-  if (normalizedToken.length <= 3) {
-    const dotted = normalizedToken.split("").join("\\.?") + "\\.?";
-    return new RegExp(`\\b(${dotted})(?=\\s|\\b|$|[.,;:!?])`, "i");
+  // For degree tokens up to 3 letters (e.g. ma, ba, bs, phd, msc, bsc, bed, med), support dotted forms (Ph.D. / M.A.)
+  if (cleanToken.length <= 3) {
+    const chars = cleanToken.split("");
+    const dotted = chars.join("\\.?") + "\\.?";
+    return new RegExp(`(?:\\b|(?<=\\s))(${dotted}|${cleanToken.toUpperCase()})(?=\\s|\\b|$|[.,;:!?])`, "gi");
   }
 
+  const escaped = token.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\b${escaped}\\b`, "i");
 }
 
 /**
  * Gets rank for a degree based on dynamic model hierarchy configuration.
- * Uses strict word boundaries to avoid false positives (e.g. "mathematics" matching "ma").
+ * Uses strict word boundaries to avoid false positives.
  */
 export function getDegreeRank(text: string, degreeHierarchy: Record<string, number>): number {
   if (!text || text.trim().length === 0) return 0;
@@ -58,14 +64,13 @@ export function getDegreeRank(text: string, degreeHierarchy: Record<string, numb
 
 /**
  * Extracts total years of experience using multi-range date parsing (e.g. 2018-2023)
- * and explicit experience statements rather than taking only the first single regex match.
+ * with overlapping interval merging to avoid double-counting parallel roles.
  */
 export function extractExperienceYears(candidateText: string): number {
   if (!candidateText) return 0;
 
   const currentYear = new Date().getFullYear();
   let maxExplicitYears = 0;
-  let totalRangeYears = 0;
 
   const explicitRegex = /\b(\d{1,2})\s*\+?\s*(?:years?|yrs?|ans?)(?:\s+(?:of|de|d'|d’)\s*)?(?:teaching|experience|expérience|enseignement|work|practice)?\b/gi;
   let match: RegExpExecArray | null;
@@ -80,6 +85,7 @@ export function extractExperienceYears(candidateText: string): number {
     }
   }
 
+  const ranges: Array<[number, number]> = [];
   const rangeRegex = /\b(19\d\d|20\d\d)\s*(?:-|–|to|à)\s*(19\d\d|20\d\d|present|actuel|aujourd'hui)\b/gi;
   while ((match = rangeRegex.exec(candidateText)) !== null) {
     const startStr = match[1];
@@ -92,8 +98,30 @@ export function extractExperienceYears(candidateText: string): number {
         : parseInt(endYearToken, 10);
 
       if (endYear >= startYear && (endYear - startYear) <= 45) {
-        totalRangeYears += (endYear - startYear);
+        ranges.push([startYear, endYear]);
       }
+    }
+  }
+
+  // Merge overlapping date intervals
+  let totalRangeYears = 0;
+  if (ranges.length > 0) {
+    ranges.sort((a, b) => a[0] - b[0]);
+    const merged: Array<[number, number]> = [ranges[0]!];
+
+    for (let i = 1; i < ranges.length; i++) {
+      const current = ranges[i]!;
+      const last = merged[merged.length - 1]!;
+
+      if (current[0] <= last[1]) {
+        last[1] = Math.max(last[1], current[1]);
+      } else {
+        merged.push(current);
+      }
+    }
+
+    for (const [start, end] of merged) {
+      totalRangeYears += (end - start);
     }
   }
 
@@ -116,7 +144,7 @@ export function calculateDynamicConfidence(factors: {
     factors.ruleCompleteness * 0.30 +
     (factors.semanticScore / 100) * 0.20;
 
-  return Math.round(Math.max(0.50, Math.min(0.99, score)) * 100) / 100;
+  return Math.round(Math.max(0.0, Math.min(0.99, score)) * 100) / 100;
 }
 
 

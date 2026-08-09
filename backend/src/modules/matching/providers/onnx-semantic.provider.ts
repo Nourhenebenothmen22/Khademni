@@ -46,6 +46,8 @@ export class OnnxSemanticProvider implements ISemanticProvider {
 
     const chunkVectors: number[][] = [];
     for (const chunk of chunks.slice(0, 4)) {
+      // Yield to Node.js event loop to prevent event-loop starvation during neural inference
+      await new Promise((resolve) => setImmediate(resolve));
       const output = await extractor(chunk, { pooling: "mean", normalize: true });
       chunkVectors.push(Array.from(output.data as Float32Array));
     }

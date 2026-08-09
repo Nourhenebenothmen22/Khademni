@@ -56,7 +56,7 @@ describe("QA & Edge-Cases Test Suite — AI Recruitment Module", () => {
         semanticScore: 100,
       });
 
-      expect(lowConfidence).toBe(0.50);
+      expect(lowConfidence).toBe(0.0);
       expect(highConfidence).toBe(0.99);
     });
   });
