@@ -37,9 +37,43 @@ enum ApplicationStatus {
   SUBMITTED
   UNDER_REVIEW
   SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEWED
   REJECTED
   ACCEPTED
   WITHDRAWN
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  RESCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum InterviewType {
+  SCREENING
+  TECHNICAL
+  PEDAGOGICAL_DEMO
+  BEHAVIORAL
+  FINAL_HR
+}
+
+enum MeetingProvider {
+  ZOOM
+  GOOGLE_MEET
+  MS_TEAMS
+  CUSTOM_LINK
+  IN_PERSON
+}
+
+enum ScorecardRecommendation {
+  STRONG_HIRE
+  HIRE
+  NEUTRAL
+  NO_HIRE
+  STRONG_NO_HIRE
 }
 
 enum DocumentType {
@@ -81,17 +115,19 @@ enum EvaluationMetricType {
 }
 
 model Organization {
-  id        String     @id @default(cuid())
-  name      String
-  slug      String     @unique
-  domain    String?    @unique
-  logoKey   String?
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  users     User[]
-  jobPosts  JobPost[]
-  auditLogs AuditLog[]
+  id               String                       @id @default(cuid())
+  name             String
+  slug             String                       @unique
+  domain           String?                      @unique
+  logoKey          String?
+  isActive         Boolean                      @default(true)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  users            User[]
+  jobPosts         JobPost[]
+  auditLogs        AuditLog[]
+  interviews       Interview[]
+  providerConfigs  OrganizationProviderConfig[]
 
   @@map("organizations")
 }
@@ -125,6 +161,10 @@ model User {
   applicationStatusChanges   ApplicationStatusHistory[] @relation("ChangedByUser")
   auditLogs                  AuditLog[]
   notifications              Notification[]
+  interviewsAsCandidate      Interview[]                @relation("CandidateInterviews")
+  interviewsAsCreator        Interview[]                @relation("CreatedInterviews")
+  interviewerAssignments     InterviewerAssignment[]
+  submittedScorecards        InterviewScorecard[]
 
   @@index([role])
   @@index([organizationId])
@@ -159,6 +199,7 @@ model JobPost {
   publishedAt    DateTime?
   closedAt       DateTime?
   createdById    String
+  embedding      Unsupported("vector(384)")?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -166,6 +207,7 @@ model JobPost {
   keywords       JobKeyword[]
   matchingRules  JobMatchingRule[]
   applications   Application[]
+  interviews     Interview[]
 
   @@index([status])
   @@index([createdById])
@@ -221,6 +263,8 @@ model Application {
   matchingRuns     MatchingRun[]
   score            ApplicationScore?
   statusHistory    ApplicationStatusHistory[]
+  interviews       Interview[]
+  hybridIndex      CandidateHybridIndex?
 
   @@unique([candidateId, jobPostId])
   @@index([candidateId])
@@ -252,13 +296,14 @@ model ApplicationDocument {
 }
 
 model DocumentParseResult {
-  id             String   @id @default(cuid())
-  documentId     String   @unique
+  id             String                      @id @default(cuid())
+  documentId     String                      @unique
   extractedText  String
   structuredData Json?
+  embedding      Unsupported("vector(384)")?
   parserName     String
   parserVersion  String
-  parsedAt       DateTime @default(now())
+  parsedAt       DateTime                    @default(now())
 
   document ApplicationDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
@@ -408,3 +453,123 @@ model Notification {
   @@index([createdAt])
   @@map("notifications")
 }
+
+model Interview {
+  id               String                  @id @default(cuid())
+  organizationId   String
+  applicationId    String
+  jobPostId        String
+  candidateId      String
+  createdById      String
+  title            String
+  description      String?
+  type             InterviewType           @default(TECHNICAL)
+  status           InterviewStatus         @default(SCHEDULED)
+  startTime        DateTime
+  endTime          DateTime
+  timezone         String                  @default("UTC")
+  meetingProvider  MeetingProvider         @default(CUSTOM_LINK)
+  meetingUrl       String?
+  meetingId        String?
+  meetingPasscode  String?
+  locationDetails  String?
+  cancelReason     String?
+  rescheduleReason String?
+  reminderSent     Boolean                 @default(false)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  application      Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  jobPost          JobPost                 @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+  candidate        User                    @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  createdBy        User                    @relation("CreatedInterviews", fields: [createdById], references: [id])
+  interviewers     InterviewerAssignment[]
+  scorecards       InterviewScorecard[]
+
+  @@index([organizationId])
+  @@index([applicationId])
+  @@index([candidateId])
+  @@index([status])
+  @@index([startTime])
+  @@map("interviews")
+}
+
+model InterviewerAssignment {
+  id             String    @id @default(cuid())
+  interviewId    String
+  userId         String
+  isPrimary      Boolean   @default(false)
+  responseStatus String    @default("PENDING")
+  createdAt      DateTime  @default(now())
+
+  interview      Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, userId])
+  @@index([userId])
+  @@map("interviewer_assignments")
+}
+
+model InterviewScorecard {
+  id             String                   @id @default(cuid())
+  interviewId    String
+  interviewerId  String
+  recommendation ScorecardRecommendation
+  overallNotes   String
+  submittedAt    DateTime                 @default(now())
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  interview      Interview                @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewer    User                     @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+  criteriaScores ScorecardCriteriaScore[]
+
+  @@unique([interviewId, interviewerId])
+  @@index([interviewerId])
+  @@map("interview_scorecards")
+}
+
+model ScorecardCriteriaScore {
+  id          String             @id @default(cuid())
+  scorecardId String
+  category    String
+  criterion   String
+  score       Int
+  comment     String?
+  createdAt   DateTime           @default(now())
+
+  scorecard   InterviewScorecard @relation(fields: [scorecardId], references: [id], onDelete: Cascade)
+
+  @@index([scorecardId])
+  @@map("scorecard_criteria_scores")
+}
+
+model OrganizationProviderConfig {
+  id             String          @id @default(cuid())
+  organizationId String
+  provider       MeetingProvider
+  credentials    Json
+  isEnabled      Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+  @@map("organization_provider_configs")
+}
+
+model CandidateHybridIndex {
+  id            String   @id @default(cuid())
+  applicationId String   @unique @map("application_id")
+  content       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_hybrid_indexes")
+}
+
