@@ -40,6 +40,9 @@ COPY --chown=node:node --from=builder /app/src/generated ./src/generated
 COPY --chown=node:node --from=builder /app/dist ./dist
 COPY --chown=node:node --from=builder /app/prisma ./prisma
 
+# Create uploads directory and assign ownership to node user
+RUN mkdir -p /app/uploads && chown -R node:node /app
+
 # Use unprivileged node user for security
 USER node
 
