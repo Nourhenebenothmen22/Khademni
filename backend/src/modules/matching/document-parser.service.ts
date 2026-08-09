@@ -87,6 +87,31 @@ export async function parseDocument(documentId: string) {
     },
   });
 
+  // Generate and persist ONNX 384d vector embedding for pgvector & candidate_hybrid_indexes
+  try {
+    const { getSemanticProvider } = await import("./semantic-factory.js");
+    const provider = getSemanticProvider("onnx-transformer");
+    if (provider && "generateVector" in provider && typeof provider.generateVector === "function") {
+      const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(extractedText);
+      if (vector384 && vector384.length === 384) {
+        const formattedVec = `[${vector384.join(",")}]`;
+        const escapedContent = extractedText.replace(/'/g, "''").substring(0, 8000);
+        
+        await prisma.$executeRawUnsafe(
+          `UPDATE document_parse_results SET embedding = '${formattedVec}'::vector WHERE id = '${parseResult.id}'`,
+        );
+
+        const hybridId = `chi_${parseResult.id}`;
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO candidate_hybrid_indexes (id, application_id, content, dense_embedding, search_vector, created_at, updated_at) VALUES ('${hybridId}', '${doc.applicationId}', '${escapedContent}', '${formattedVec}'::vector, to_tsvector('simple', '${escapedContent}'), NOW(), NOW()) ON CONFLICT (application_id) DO UPDATE SET content = EXCLUDED.content, dense_embedding = EXCLUDED.dense_embedding, search_vector = EXCLUDED.search_vector, updated_at = NOW()`,
+        );
+      }
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    logger.warn({ err: message, documentId: doc.id }, "Vector embedding persistence during document ingestion skipped due to error.");
+  }
+
   await prisma.applicationDocument.update({
     where: { id: doc.id },
     data: { status: "SCANNED", scannedAt: new Date() },

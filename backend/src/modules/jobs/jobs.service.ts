@@ -42,6 +42,10 @@ export async function createJobPost(
 
   await invalidateJobCache();
 
+  // Asynchronously compute and persist 384d ONNX vector for JobPost
+  const textContent = `${jobPost.title}. ${jobPost.description}. ${jobPost.requirements}`;
+  saveJobPostVector(jobPost.id, textContent).catch(() => {});
+
   logAuditAction({
     userId: createdById,
     organizationId,
@@ -52,6 +56,24 @@ export async function createJobPost(
   });
 
   return jobPost;
+}
+
+async function saveJobPostVector(jobPostId: string, textContent: string): Promise<void> {
+  try {
+    const { getSemanticProvider } = await import("../matching/semantic-factory.js");
+    const provider = getSemanticProvider("onnx-transformer");
+    if (provider && "generateVector" in provider && typeof provider.generateVector === "function") {
+      const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(textContent);
+      if (vector384 && vector384.length === 384) {
+        const formattedVec = `[${vector384.join(",")}]`;
+        await prisma.$executeRawUnsafe(
+          `UPDATE job_posts SET embedding = '${formattedVec}'::vector WHERE id = '${jobPostId}'`,
+        );
+      }
+    }
+  } catch (err: unknown) {
+    // Non-blocking vector generation
+  }
 }
 
 export async function getJobPosts(
@@ -66,9 +88,10 @@ export async function getJobPosts(
   const whereClause: Prisma.JobPostWhereInput = {};
 
   if (requesterRole === "ADMIN") {
-    if (requesterOrgId) {
-      whereClause.organizationId = requesterOrgId;
+    if (!requesterOrgId) {
+      throw new AppError("Forbidden. Organization context is required for admin access.", 403);
     }
+    whereClause.organizationId = requesterOrgId;
     if (query.status) {
       whereClause.status = query.status;
     }
@@ -220,6 +243,11 @@ export async function updateJobPost(
 
   await invalidateJobCache(id);
 
+  if (input.title !== undefined || input.description !== undefined || input.requirements !== undefined) {
+    const textContent = `${updatedJob.title}. ${updatedJob.description}. ${updatedJob.requirements}`;
+    saveJobPostVector(updatedJob.id, textContent).catch(() => {});
+  }
+
   logAuditAction({
     userId: existingJob.createdById,
     organizationId,
@@ -239,6 +267,17 @@ export async function deleteJobPost(id: string, organizationId: string) {
 
   if (!existingJob) {
     throw new AppError("Job post not found or access denied.", 404);
+  }
+
+  const applicationCount = await prisma.application.count({
+    where: { jobPostId: id },
+  });
+
+  if (applicationCount > 0) {
+    throw new AppError(
+      `Cannot delete job post with ${applicationCount} submitted application(s). Change job status to CLOSED or ARCHIVED instead.`,
+      400,
+    );
   }
 
   await prisma.jobPost.delete({
