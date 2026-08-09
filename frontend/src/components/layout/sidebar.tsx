@@ -17,6 +17,7 @@ import {
   Bell,
   Settings,
   ShieldAlert,
+  Calendar,
   User as UserIcon,
 } from "lucide-react";
 
@@ -29,12 +30,14 @@ export function Sidebar() {
   const candidateNav = [
     { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard },
     { name: "My Applications", href: "/candidate/applications", icon: FileText },
+    { name: "My Interviews", href: "/candidate/interviews", icon: Calendar },
   ];
 
   const adminNav = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Job Openings", href: "/admin/jobs", icon: Briefcase },
     { name: "Applications", href: "/admin/applications", icon: FileText },
+    { name: "Interviews", href: "/admin/interviews", icon: Calendar },
     { name: "AI Matching Run", href: "/admin/matching", icon: Cpu },
     { name: "AI Benchmark Models", href: "/admin/ai-models", icon: ShieldCheck },
     { name: "User Directory", href: "/admin/users", icon: Users },
@@ -71,7 +74,7 @@ export function Sidebar() {
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#282276] text-[10px] font-extrabold text-white">
                 {user?.fullName?.charAt(0).toUpperCase() || "U"}
               </span>
-              <span className="truncate">{user?.fullName || "Nourhene ben othmen"}</span>
+              <span className="truncate">{user?.fullName || "User"}</span>
             </div>
             <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <span>{user?.role || "CANDIDATE"}</span>
@@ -153,7 +156,7 @@ export function Sidebar() {
       {/* Bottom Circle Badge */}
       <div className="pt-4 border-t border-slate-200/60">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#282276] text-white font-extrabold text-xs shadow-xs">
-          {user?.fullName?.charAt(0).toUpperCase() || "N"}
+          {user?.fullName?.charAt(0).toUpperCase() || "U"}
         </div>
       </div>
     </aside>

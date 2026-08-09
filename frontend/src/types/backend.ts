@@ -2,12 +2,17 @@ export type UserRole = "CANDIDATE" | "ADMIN";
 export type JobStatus = "DRAFT" | "PUBLISHED" | "CLOSED" | "ARCHIVED";
 export type KeywordType = "REQUIRED" | "OPTIONAL" | "BONUS";
 export type RuleType = "EXPERIENCE" | "DEGREE" | "CERTIFICATION" | "KEYWORD" | "CUSTOM";
-export type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "REJECTED" | "ACCEPTED" | "WITHDRAWN";
+export type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "INTERVIEW_SCHEDULED" | "INTERVIEWED" | "REJECTED" | "ACCEPTED" | "WITHDRAWN";
 export type DocumentType = "CV" | "MOTIVATION_LETTER";
 export type DocumentStatus = "UPLOADED" | "SCANNED" | "VALIDATED" | "REJECTED";
 export type RunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 export type ScoreRecommendation = "HIGHLY_RECOMMENDED" | "RECOMMENDED" | "AVERAGE" | "NOT_RECOMMENDED";
 export type EvaluationMetricType = "ACCURACY" | "PRECISION" | "RECALL" | "F1_SCORE" | "PRECISION_AT_1" | "PRECISION_AT_5" | "NDCG_AT_5" | "MAP" | "MRR";
+
+export type InterviewStatus = "SCHEDULED" | "RESCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+export type InterviewType = "SCREENING" | "TECHNICAL" | "PEDAGOGICAL_DEMO" | "BEHAVIORAL" | "FINAL_HR";
+export type MeetingProvider = "ZOOM" | "GOOGLE_MEET" | "MS_TEAMS" | "CUSTOM_LINK" | "IN_PERSON";
+export type ScorecardRecommendation = "STRONG_HIRE" | "HIRE" | "NEUTRAL" | "NO_HIRE" | "STRONG_NO_HIRE";
 
 export interface PaginationMeta {
   page: number;
@@ -240,3 +245,67 @@ export interface DashboardStats {
   totalJobPosts: number;
   applicationsByStatus: Array<{ status: ApplicationStatus; count: number }>;
 }
+
+export interface ScorecardCriteriaScore {
+  id: string;
+  scorecardId: string;
+  category: string;
+  criterion: string;
+  score: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface InterviewScorecard {
+  id: string;
+  interviewId: string;
+  interviewerId: string;
+  recommendation: ScorecardRecommendation;
+  overallNotes: string;
+  submittedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  interviewer?: Partial<User>;
+  criteriaScores?: ScorecardCriteriaScore[];
+}
+
+export interface InterviewerAssignment {
+  id: string;
+  interviewId: string;
+  userId: string;
+  isPrimary: boolean;
+  responseStatus: string;
+  createdAt: string;
+  user?: Partial<User>;
+}
+
+export interface Interview {
+  id: string;
+  organizationId: string;
+  applicationId: string;
+  jobPostId: string;
+  candidateId: string;
+  createdById: string;
+  title: string;
+  description?: string | null;
+  type: InterviewType;
+  status: InterviewStatus;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+  meetingProvider: MeetingProvider;
+  meetingUrl?: string | null;
+  meetingId?: string | null;
+  meetingPasscode?: string | null;
+  locationDetails?: string | null;
+  cancelReason?: string | null;
+  rescheduleReason?: string | null;
+  reminderSent: boolean;
+  createdAt: string;
+  updatedAt: string;
+  candidate?: Partial<User>;
+  jobPost?: Partial<JobPost>;
+  interviewers?: InterviewerAssignment[];
+  scorecards?: InterviewScorecard[];
+}
+
