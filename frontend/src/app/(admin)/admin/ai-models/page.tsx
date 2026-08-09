@@ -159,7 +159,7 @@ export default function AIModelsRegistryPage() {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Created: {new Date(m.createdAt).toLocaleDateString()}</span>
                 <Link
-                  href={`/admin/ai-models/${m.id}/evaluations/eval-1`}
+                  href={`/admin/ai-models/${m.id}/evaluations`}
                   className="font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
                 >
                   Evaluations & Metrics <ChevronRight className="h-3.5 w-3.5" />
