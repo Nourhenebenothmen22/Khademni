@@ -15,7 +15,7 @@ export default function MyOrganizationPage() {
   const org = data?.data;
 
   return (
-    <DashboardShell>
+    <DashboardShell requiredRole="ADMIN">
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Current Organization Context</h1>

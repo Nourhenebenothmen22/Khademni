@@ -5,13 +5,34 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getAvatarImageUrl } from "@/lib/api/client";
 import { fetchUnreadNotificationCount } from "@/features/notifications/api";
-import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles } from "lucide-react";
+import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles, Menu, X, LayoutDashboard, FileText, Briefcase, Cpu, Users, ShieldCheck, ShieldAlert, Settings } from "lucide-react";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+
+  const isAdmin = user?.role === "ADMIN";
+
+  const candidateNav = [
+    { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard },
+    { name: "My Applications", href: "/candidate/applications", icon: FileText },
+  ];
+
+  const adminNav = [
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { name: "Job Openings", href: "/admin/jobs", icon: Briefcase },
+    { name: "Applications", href: "/admin/applications", icon: FileText },
+    { name: "AI Matching Run", href: "/admin/matching", icon: Cpu },
+    { name: "AI Benchmark Models", href: "/admin/ai-models", icon: ShieldCheck },
+    { name: "User Directory", href: "/admin/users", icon: Users },
+    { name: "Organizations", href: "/admin/organizations", icon: Building2 },
+    { name: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+  ];
+
+  const navItems = isAdmin ? adminNav : candidateNav;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -26,7 +47,17 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 md:gap-8">
+          {isAuthenticated && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+              aria-label="Toggle mobile menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
+
           <Link href="/jobs" className="flex items-center gap-2.5 font-extrabold text-slate-900 text-lg tracking-tight group">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#282276] text-white shadow-md shadow-indigo-900/10 group-hover:scale-105 transition-transform">
               <Building2 className="h-5 w-5 text-white" />
@@ -70,7 +101,7 @@ export function Header() {
                   className="flex items-center gap-2 rounded-full border border-slate-200/90 bg-slate-50/50 p-1 pl-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-100/80 transition-all focus:outline-none"
                 >
                   <span className="truncate max-w-[140px] sm:max-w-[180px]">
-                    {user?.fullName || "Nourhene ben othmen"}
+                    {user?.fullName || "User"}
                   </span>
                   {user?.avatarUrl && !avatarError ? (
                     <img
@@ -81,7 +112,7 @@ export function Header() {
                     />
                   ) : (
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#282276] text-white font-extrabold text-xs shadow-xs">
-                      {user?.fullName?.charAt(0).toUpperCase() || "N"}
+                      {user?.fullName?.charAt(0).toUpperCase() || "U"}
                     </div>
                   )}
                   <ChevronDown className={`h-4 w-4 text-slate-400 mr-1 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
@@ -154,6 +185,53 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu Drawer */}
+      {mobileMenuOpen && isAuthenticated && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top duration-200">
+          <div className="space-y-1">
+            <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              {isAdmin ? "Admin Navigation" : "Candidate Portal"}
+            </p>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-[#e2e3f6] hover:text-[#282276] transition-colors"
+                >
+                  <Icon className="h-4 w-4 text-[#282276]" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 space-y-1">
+            <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              Preferences
+            </p>
+            <Link
+              href="/notifications"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-[#e2e3f6] hover:text-[#282276] transition-colors"
+            >
+              <Bell className="h-4 w-4 text-[#282276]" />
+              <span>Notifications ({unreadCount})</span>
+            </Link>
+            <Link
+              href="/settings/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-[#e2e3f6] hover:text-[#282276] transition-colors"
+            >
+              <Settings className="h-4 w-4 text-[#282276]" />
+              <span>Account & Security</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

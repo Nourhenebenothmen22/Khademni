@@ -39,11 +39,19 @@ export default function CandidateDashboardPage() {
   const submittedCount = applications.filter((a) => a.status === "SUBMITTED").length;
   const offersCount = applications.filter((a) => a.status === "ACCEPTED").length;
   const rejectedCount = applications.filter((a) => a.status === "REJECTED").length;
+  const underReviewPct = totalApps > 0 ? Math.round((underReviewCount / totalApps) * 100) : 0;
+  const submittedPct = totalApps > 0 ? Math.round((submittedCount / totalApps) * 100) : 0;
+  const offersPct = totalApps > 0 ? Math.round((offersCount / totalApps) * 100) : 0;
+  const rejectedPct = totalApps > 0 ? Math.round((rejectedCount / totalApps) * 100) : 0;
 
-  const underReviewPct = totalApps > 0 ? Math.round((underReviewCount / totalApps) * 100) : 45;
-  const submittedPct = totalApps > 0 ? Math.round((submittedCount / totalApps) * 100) : 30;
-  const offersPct = totalApps > 0 ? Math.round((offersCount / totalApps) * 100) : 15;
-  const rejectedPct = totalApps > 0 ? Math.round((rejectedCount / totalApps) * 100) : 10;
+  // Calculate dynamic profile strength percentage
+  let profileStrength = 0;
+  if (user?.fullName) profileStrength += 25;
+  if (user?.isEmailVerified) profileStrength += 25;
+  if (user?.avatarUrl) profileStrength += 25;
+  if (applications.length > 0) profileStrength += 25;
+
+  const profileDashOffset = 100 - profileStrength;
 
   return (
     <DashboardShell requiredRole="CANDIDATE">
@@ -52,11 +60,11 @@ export default function CandidateDashboardPage() {
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Candidate Dashboard</h1>
           <p className="mt-0.5 text-xs sm:text-sm font-semibold text-slate-500">
-            Hello {user?.fullName?.split(" ")[0] || "Nourhene"}! Here&apos;s your personalized overview.
+            Hello {user?.fullName?.split(" ")[0] || "Candidate"}! Here&apos;s your personalized recruitment overview.
           </p>
         </div>
 
-        {/* 2-Column Grid Layout matching screenshot */}
+        {/* 2-Column Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
@@ -120,7 +128,7 @@ export default function CandidateDashboardPage() {
                     </svg>
                   </div>
 
-                  {/* Legend list matching screenshot */}
+                  {/* Legend list */}
                   <div className="space-y-3 font-bold text-xs sm:text-sm text-slate-700 w-full sm:w-auto">
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-2">
@@ -160,7 +168,7 @@ export default function CandidateDashboardPage() {
 
             {/* Card 2: Profile Strength */}
             <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4 text-center">
-              <h2 className="text-base font-extrabold text-slate-900 text-left">Profile Strength</h2>
+              <h2 className="text-base font-extrabold text-slate-900 text-left">Profile Completeness</h2>
 
               <div className="py-2">
                 <div className="relative mx-auto h-32 w-32 flex items-center justify-center">
@@ -174,7 +182,7 @@ export default function CandidateDashboardPage() {
                     />
                     <path
                       className="text-[#282276]"
-                      strokeDasharray="85, 100"
+                      strokeDasharray={`${profileStrength}, 100`}
                       strokeWidth="3.5"
                       strokeLinecap="round"
                       stroke="currentColor"
@@ -182,50 +190,51 @@ export default function CandidateDashboardPage() {
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                   </svg>
-                  <span className="absolute text-2xl font-black text-slate-900">85%</span>
+                  <span className="absolute text-2xl font-black text-slate-900">{profileStrength}%</span>
                 </div>
               </div>
 
               <p className="text-xs font-semibold text-slate-500 max-w-xs mx-auto">
-                Add skills to extra recompt to view your profile.
+                Complete your profile details to improve job match accuracy.
               </p>
             </div>
           </div>
 
           {/* Right Column (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Card 1: Next Interview */}
+            {/* Card 1: Active Applications Summary */}
             <div className="rounded-[22px] border border-slate-200/80 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
               <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
                 <Briefcase className="h-4 w-4 text-[#282276]" />
-                <span>Next Interview</span>
+                <span>Active Submissions</span>
               </div>
 
-              <div className="rounded-2xl border border-indigo-100/90 bg-[#f4f5fc] p-4 space-y-2 text-xs">
-                <div className="flex items-center gap-3 font-bold text-slate-900">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-black shadow-2xs">
-                    A
+              {applications.length > 0 ? (
+                <div className="rounded-2xl border border-indigo-100/90 bg-[#f4f5fc] p-4 space-y-3 text-xs">
+                  <div className="flex items-center justify-between font-bold text-slate-900">
+                    <p className="text-sm font-black text-slate-900 truncate">
+                      {applications[0].jobPost?.title || "Position Application"}
+                    </p>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800">
+                      {applications[0].status}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900">Amazon</p>
-                    <p className="text-xs font-semibold text-slate-500">Product Manager</p>
-                  </div>
-                </div>
 
-                <div className="pt-1 space-y-1 font-semibold text-slate-600">
-                  <p className="flex items-center gap-1.5 text-indigo-700">
-                    <Globe className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">Online: https://amn.kiVE.online</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span>Date: Jan 20, 2024</span>
-                  </p>
-                  <p className="text-slate-500 pt-0.5">
-                    Recruiter: <strong className="text-slate-800">{user?.fullName || "Nourhene ben Othmen"}</strong>
-                  </p>
+                  <div className="pt-1 space-y-1 font-semibold text-slate-600">
+                    <p className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span>Submitted: {new Date(applications[0].submittedAt).toLocaleDateString()}</span>
+                    </p>
+                    <p className="text-slate-500 pt-0.5">
+                      Tracking Code: <strong className="font-mono text-slate-800">{applications[0].trackingCode}</strong>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-center text-xs font-semibold text-slate-500">
+                  No active job applications submitted yet.
+                </div>
+              )}
             </div>
 
             {/* Card 2: Recent Activity */}
@@ -237,7 +246,7 @@ export default function CandidateDashboardPage() {
 
               <div className="space-y-3.5 text-xs font-semibold">
                 {notifications.length > 0 ? (
-                  notifications.slice(0, 2).map((n) => (
+                  notifications.slice(0, 3).map((n) => (
                     <div key={n.id} className="flex items-start gap-3">
                       <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shrink-0 border border-indigo-100">
                         <MessageSquare className="h-3.5 w-3.5" />
@@ -251,27 +260,7 @@ export default function CandidateDashboardPage() {
                     </div>
                   ))
                 ) : (
-                  <>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shrink-0 border border-indigo-100">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-slate-900 font-bold">Message from Google recruiter ex.</p>
-                        <p className="text-slate-400 text-[11px] mt-0.5">Jan 15 sec ago</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 shrink-0 border border-emerald-100">
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-slate-900 font-bold">Job Offer status updated.</p>
-                        <p className="text-slate-400 text-[11px] mt-0.5">Jan 10 sec ago</p>
-                      </div>
-                    </div>
-                  </>
+                  <p className="text-slate-500 text-xs py-2 text-center">No recent notifications.</p>
                 )}
               </div>
             </div>
@@ -284,7 +273,7 @@ export default function CandidateDashboardPage() {
                   <span>Job Recommendations</span>
                 </div>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">
-                  Based on your profile based on your profile.
+                  Recommended positions matching your profile.
                 </p>
               </div>
 
@@ -300,39 +289,13 @@ export default function CandidateDashboardPage() {
                         <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#282276] transition-colors">
                           {job.title}
                         </p>
-                        <p className="text-[11px] text-slate-400 font-semibold">Recommended job title</p>
+                        <p className="text-[11px] text-slate-400 font-semibold">{job.organization?.name || "Khademni Partner School"}</p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#282276]" />
                     </Link>
                   ))
                 ) : (
-                  <>
-                    <Link
-                      href="/jobs"
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-indigo-50/60 border border-slate-100 transition-colors group"
-                    >
-                      <div>
-                        <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#282276] transition-colors">
-                          UX/UI Designer
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-semibold">Recommended job title</p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#282276]" />
-                    </Link>
-
-                    <Link
-                      href="/jobs"
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-indigo-50/60 border border-slate-100 transition-colors group"
-                    >
-                      <div>
-                        <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#282276] transition-colors">
-                          Backend Engineer
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-semibold">Recommended job title</p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#282276]" />
-                    </Link>
-                  </>
+                  <p className="text-slate-500 text-xs py-2 text-center">No open positions published currently.</p>
                 )}
               </div>
             </div>
