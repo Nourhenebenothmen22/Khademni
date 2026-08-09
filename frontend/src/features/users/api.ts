@@ -78,3 +78,17 @@ export async function toggleUserActive(id: string, isActive: boolean): Promise<A
     body: JSON.stringify({ isActive }),
   });
 }
+
+export interface CreateOrgUserPayload {
+  fullName: string;
+  email: string;
+  password: string;
+  role?: UserRole;
+}
+
+export async function createOrgUser(payload: CreateOrgUserPayload): Promise<ApiResponse<User>> {
+  return apiRequest<User>("/admin/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
