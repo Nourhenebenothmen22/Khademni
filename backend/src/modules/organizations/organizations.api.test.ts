@@ -129,4 +129,23 @@ describe("Organizations API Integration Tests", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.name).toBe("Acme International Academy");
   });
+
+  it("GET /api/v1/organizations/:id — should allow Admin 2 to access Org 2 and deny access to Org 1", async () => {
+    const resOrg2 = await request(app)
+      .get(`/api/v1/organizations/${org2Id}`)
+      .set("Origin", "http://localhost:3001")
+      .set("Authorization", `Bearer ${admin2Token}`);
+
+    expect(resOrg2.status).toBe(200);
+    expect(resOrg2.body.success).toBe(true);
+    expect(resOrg2.body.data.id).toBe(org2Id);
+
+    const resOrg1 = await request(app)
+      .get(`/api/v1/organizations/${org1Id}`)
+      .set("Origin", "http://localhost:3001")
+      .set("Authorization", `Bearer ${admin2Token}`);
+
+    expect(resOrg1.status).toBe(403);
+    expect(resOrg1.body.success).toBe(false);
+  });
 });
