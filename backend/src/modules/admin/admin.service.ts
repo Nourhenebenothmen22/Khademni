@@ -2,6 +2,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
+import { hashPassword } from "../../lib/password.js";
 import type { UserQuery } from "../../common/validators/user.validators.js";
 import type { AuditLogQuery } from "../../common/validators/audit-log.validators.js";
 
@@ -215,7 +216,6 @@ export async function createOrgUser(
     throw new AppError("A user with this email address already exists.", 409);
   }
 
-  const { hashPassword } = await import("../../lib/password.js");
   const passwordHash = await hashPassword(input.password);
 
   const user = await prisma.user.create({

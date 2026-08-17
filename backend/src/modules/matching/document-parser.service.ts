@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { getAbsolutePath, fileExists } from "../../lib/file-storage.js";
 import { logger } from "../../lib/logger.js";
+import { getSemanticProvider } from "./semantic-factory.js";
 
 const pdfParse = ((pdfParseModule as { default?: unknown }).default || pdfParseModule) as (
   dataBuffer: Buffer,
@@ -89,7 +90,6 @@ export async function parseDocument(documentId: string) {
 
   // Generate and persist ONNX 384d vector embedding for pgvector & candidate_hybrid_indexes
   try {
-    const { getSemanticProvider } = await import("./semantic-factory.js");
     const provider = getSemanticProvider("onnx-transformer");
     if (provider && "generateVector" in provider && typeof provider.generateVector === "function") {
       const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(extractedText);

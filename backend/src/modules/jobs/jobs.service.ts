@@ -2,6 +2,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
+import { getSemanticProvider } from "../matching/semantic-factory.js";
 import {
   getCache,
   setCache,
@@ -60,7 +61,6 @@ export async function createJobPost(
 
 async function saveJobPostVector(jobPostId: string, textContent: string): Promise<void> {
   try {
-    const { getSemanticProvider } = await import("../matching/semantic-factory.js");
     const provider = getSemanticProvider("onnx-transformer");
     if (provider && "generateVector" in provider && typeof provider.generateVector === "function") {
       const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(textContent);
