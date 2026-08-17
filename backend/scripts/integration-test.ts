@@ -66,7 +66,6 @@ async function runIntegrationTest() {
       },
     });
 
-
     const loginRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +181,10 @@ async function runIntegrationTest() {
     console.log('  ✅ Token rotated cleanly.');
 
     // Wait for 10s grace period to expire to trigger stolen token reuse lockout
-    await new Promise((r) => setTimeout(r, 10100));
+    for (let i = 0; i < 11; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      await fetch(`${baseUrl}/auth/csrf`).catch(() => {});
+    }
 
     // Reuse stolen old refresh token -> Should trigger security lockout!
     const reuseRes = await fetch(`${baseUrl}/auth/refresh`, {
@@ -191,7 +193,7 @@ async function runIntegrationTest() {
       body: JSON.stringify({ refreshToken: oldRefreshToken }),
     });
     const reuseData = await reuseRes.json();
-    if (reuseRes.ok || !reuseData.message.includes('Security alert')) {
+    if (reuseRes.ok || !reuseData.message?.includes('Security alert')) {
       throw new Error(`Token breach defense failed to block reuse: ${JSON.stringify(reuseData)}`);
     }
     console.log('  ✅ Refresh token reuse attack blocked & active sessions invalidated.');
@@ -203,6 +205,9 @@ async function runIntegrationTest() {
       body: JSON.stringify({ email: candidateEmail, password }),
     });
     const reloginData = await reloginRes.json();
+    if (!reloginRes.ok || !reloginData.data?.mfaToken) {
+      throw new Error(`Re-login after lockout failed: ${JSON.stringify(reloginData)}`);
+    }
     const newMfaToken = reloginData.data.mfaToken;
     const postLockoutCode = await generate({ secret });
     const postLockoutRes = await fetch(`${baseUrl}/auth/mfa/login`, {
@@ -217,7 +222,6 @@ async function runIntegrationTest() {
     console.log('🔹 [Jobs] Testing Admin Job Creation, Keywords & Matching Rules...');
     const { signAccessToken } = await import('../src/lib/jwt.js');
     const adminToken = await signAccessToken({ userId: adminUser.id, role: 'ADMIN', organizationId: testOrg.id });
-
 
     const createJobRes = await fetch(`${baseUrl}/jobs`, {
       method: 'POST',
@@ -311,7 +315,7 @@ async function runIntegrationTest() {
     }
     console.log('  ✅ Candidate successfully streamed document file from disk.');
 
-    // 7. Phase 1, 2 & 3 pgvector Hybrid AI Matching Engine Execution
+    // 7. pgvector Hybrid AI Matching Engine Execution
     console.log('🔹 [AI Matching] Testing pgvector Dense Vector & Hybrid Matching...');
     const createModelRes = await fetch(`${baseUrl}/ai-models`, {
       method: 'POST',
@@ -413,7 +417,7 @@ async function runIntegrationTest() {
     console.log(`  ✅ AI Model Evaluation & ${metricsData.data.length} metrics created successfully.`);
 
     // 9. Application Status Transition State Machine & Notifications
-    console.log('🔹 [Notifications] Testing State Machine Transitions & Notifications...');
+    console.log('🔹 [Notifications & State Machine] Testing State Transitions & Notifications...');
 
     // SUBMITTED -> UNDER_REVIEW
     const reviewRes = await fetch(`${baseUrl}/applications/${appId}/status`, {
@@ -439,7 +443,16 @@ async function runIntegrationTest() {
     if (!statusUpdateRes.ok) throw new Error(`SHORTLISTED transition failed: ${await statusUpdateRes.text()}`);
     console.log('  ✅ Application transitioned UNDER_REVIEW -> SHORTLISTED.');
 
-    // Fetch Candidate Notifications
+    // Fetch Candidate Notifications & Unread Count
+    const unreadCountRes = await fetch(`${baseUrl}/notifications/unread-count`, {
+      headers: { Authorization: `Bearer ${candidateToken}` },
+    });
+    const unreadCountData = await unreadCountRes.json();
+    if (!unreadCountRes.ok || typeof unreadCountData.data?.count !== 'number') {
+      throw new Error(`Unread count failed: ${JSON.stringify(unreadCountData)}`);
+    }
+    console.log(`  ✅ Unread notification counter verified: ${unreadCountData.data.count} unread.`);
+
     const notifRes = await fetch(`${baseUrl}/notifications`, {
       headers: { Authorization: `Bearer ${candidateToken}` },
     });
@@ -448,6 +461,75 @@ async function runIntegrationTest() {
       throw new Error(`Notifications test failed: ${JSON.stringify(notifData)}`);
     }
     console.log(`  ✅ In-app notifications received: ${notifData.data.length} notification(s). Latest title: "${notifData.data[0].title}"`);
+
+    // 10. Interview Scheduling, Scorecards & iCalendar .ics Generation
+    console.log('🔹 [Interviews] Testing Interview Scheduling, Scorecard & .ics Generation...');
+    const startTime = new Date(Date.now() + 86400000).toISOString();
+    const endTime = new Date(Date.now() + 86400000 + 3600000).toISOString();
+
+    const scheduleRes = await fetch(`${baseUrl}/interviews`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        applicationId: appId,
+        title: 'Physics Teaching Demonstration',
+        type: 'TECHNICAL',
+        startTime,
+        endTime,
+        meetingProvider: 'CUSTOM_LINK',
+        customMeetingUrl: 'https://meet.google.com/abc-defg-hij',
+        interviewerIds: [adminUser.id],
+        description: 'Prepare a 15-minute lesson on Thermodynamics.',
+      }),
+    });
+    const scheduleData = await scheduleRes.json();
+    if (!scheduleRes.ok) throw new Error(`Interview scheduling failed: ${JSON.stringify(scheduleData)}`);
+    const interviewId = scheduleData.data.id;
+    console.log('  ✅ Interview scheduled with custom meeting link. ID:', interviewId);
+
+    // Candidate views interview
+    const candInterviewsRes = await fetch(`${baseUrl}/interviews/me`, {
+      headers: { Authorization: `Bearer ${candidateToken}` },
+    });
+    const candInterviewsData = await candInterviewsRes.json();
+    if (!candInterviewsRes.ok || candInterviewsData.data.length === 0) {
+      throw new Error(`Candidate view interviews failed: ${JSON.stringify(candInterviewsData)}`);
+    }
+    console.log('  ✅ Candidate retrieved upcoming interviews.');
+
+    // Admin submits multi-criteria evaluation scorecard
+    const scorecardRes = await fetch(`${baseUrl}/interviews/${interviewId}/scorecards`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recommendation: 'STRONG_HIRE',
+        overallNotes: 'Superb pedagogical clarity and rigorous physics proofs on blackboard.',
+        criteriaScores: [
+          { category: 'Subject Knowledge', criterion: 'Thermodynamics', score: 5, comment: 'Flawless exposition' },
+          { category: 'Communication', criterion: 'Student Interaction', score: 5, comment: 'Engaging style' },
+        ],
+      }),
+    });
+    const scorecardData = await scorecardRes.json();
+    if (!scorecardRes.ok) throw new Error(`Scorecard submission failed: ${JSON.stringify(scorecardData)}`);
+    console.log('  ✅ Multi-criteria evaluation scorecard submitted.');
+
+    // Download iCal .ics file
+    const icsRes = await fetch(`${baseUrl}/interviews/${interviewId}/calendar.ics`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    if (!icsRes.ok) throw new Error(`Calendar .ics download failed: status ${icsRes.status}`);
+    const icsText = await icsRes.text();
+    if (!icsText.includes('BEGIN:VCALENDAR') || !icsText.includes('END:VCALENDAR')) {
+      throw new Error('ICS content structure invalid');
+    }
+    console.log('  ✅ RFC-compliant .ics calendar event downloaded successfully.');
 
     // 11. Testing User Avatar & Organization Logo Endpoints
     console.log('🔹 [Avatars] Testing User Avatar & Organization Logo System...');
@@ -499,7 +581,18 @@ async function runIntegrationTest() {
     }
     console.log('  ✅ User avatar deleted and cleaned up.');
 
-    console.log('\n🎉 ALL PRODUCTION SCALABILITY & BACKEND INTEGRATION TESTS PASSED CLEANLY!');
+    // 12. Admin Statistics & Reporting
+    console.log('🔹 [Admin Dashboard] Testing Organization Recruitment Metrics...');
+    const statsRes = await fetch(`${baseUrl}/admin/stats`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    const statsData = await statsRes.json();
+    if (!statsRes.ok || !statsData.data?.users || !statsData.data?.jobs) {
+      throw new Error(`Admin stats aggregation failed: ${JSON.stringify(statsData)}`);
+    }
+    console.log(`  ✅ Admin recruitment stats retrieved: ${statsData.data.users.total} total user(s), ${statsData.data.jobs.length} job status metric(s).`);
+
+    console.log('\n🎉 ALL 12 PRODUCTION MODULES & INTEGRATION TESTS PASSED 100% CLEANLY!');
   } catch (error) {
     console.error('❌ Integration Test Failed:', error);
     process.exitCode = 1;
