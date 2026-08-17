@@ -83,42 +83,51 @@ async function main() {
     },
   });
 
-  // Seed Sample Job Post
-  const job = await prisma.jobPost.create({
-    data: {
+  // Seed Sample Job Post (idempotent)
+  let job = await prisma.jobPost.findFirst({
+    where: {
       title: "Senior Secondary Physics & Math Teacher",
-      description: "Looking for an experienced secondary school Physics and Mathematics teacher with strong curriculum knowledge.",
-      requirements: "Master or Bachelor degree in Physics/Mathematics with 3+ years teaching experience.",
-      status: "PUBLISHED",
-      publishedAt: new Date(),
-      createdById: admin.id,
       organizationId: org.id,
-      keywords: {
-        create: [
-          { keyword: "Physics", type: "REQUIRED", weight: 1.5 },
-          { keyword: "Mathematics", type: "REQUIRED", weight: 1.5 },
-          { keyword: "Curriculum", type: "OPTIONAL", weight: 1.0 },
-          { keyword: "Pedagogy", type: "BONUS", weight: 0.5 },
-        ],
-      },
-      matchingRules: {
-        create: [
-          {
-            ruleName: "Minimum Experience Requirement",
-            type: "EXPERIENCE",
-            condition: { minYears: 3 },
-            weight: 1.2,
-          },
-          {
-            ruleName: "Required Degree Level",
-            type: "DEGREE",
-            condition: { allowedDegrees: ["Bachelor", "Master", "PhD"] },
-            weight: 1.0,
-          },
-        ],
-      },
     },
   });
+
+  if (!job) {
+    job = await prisma.jobPost.create({
+      data: {
+        title: "Senior Secondary Physics & Math Teacher",
+        description: "Looking for an experienced secondary school Physics and Mathematics teacher with strong curriculum knowledge.",
+        requirements: "Master or Bachelor degree in Physics/Mathematics with 3+ years teaching experience.",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        createdById: admin.id,
+        organizationId: org.id,
+        keywords: {
+          create: [
+            { keyword: "Physics", type: "REQUIRED", weight: 1.5 },
+            { keyword: "Mathematics", type: "REQUIRED", weight: 1.5 },
+            { keyword: "Curriculum", type: "OPTIONAL", weight: 1.0 },
+            { keyword: "Pedagogy", type: "BONUS", weight: 0.5 },
+          ],
+        },
+        matchingRules: {
+          create: [
+            {
+              ruleName: "Minimum Experience Requirement",
+              type: "EXPERIENCE",
+              condition: { minYears: 3 },
+              weight: 1.2,
+            },
+            {
+              ruleName: "Required Degree Level",
+              type: "DEGREE",
+              condition: { allowedDegrees: ["Bachelor", "Master", "PhD"] },
+              weight: 1.0,
+            },
+          ],
+        },
+      },
+    });
+  }
 
   console.log(`Seeding finished successfully. Org: ${org.name}, Admin: ${admin.email}, Candidate: ${candidate.email}, Job: ${job.title}, Model: ${model.name}`);
 }
