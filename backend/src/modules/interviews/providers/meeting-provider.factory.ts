@@ -20,7 +20,7 @@ export interface MeetingResult {
 export async function createMeetingLink(
   input: CreateMeetingInput,
 ): Promise<MeetingResult> {
-  const { provider, customMeetingUrl, locationDetails, topic, startTime, durationMinutes } = input;
+  const { provider, customMeetingUrl, topic, startTime, durationMinutes } = input;
 
   switch (provider) {
     case "CUSTOM_LINK": {
