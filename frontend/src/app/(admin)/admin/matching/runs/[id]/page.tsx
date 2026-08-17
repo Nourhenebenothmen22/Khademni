@@ -2,14 +2,16 @@
 
 import React, { use } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMatchingRunById } from "@/features/matching/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft, Cpu, CheckCircle2, AlertCircle } from "lucide-react";
 
-export default function MatchingRunDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function MatchingRunDetailPage({ params }: { params?: Promise<{ id: string }> }) {
+  const routeParams = useParams();
+  const id = (routeParams?.id as string) || (params ? use(params).id : "");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["matchingRunDetail", id],
@@ -47,10 +49,10 @@ export default function MatchingRunDetailPage({ params }: { params: Promise<{ id
               <div>
                 <StatusBadge status={run.status} />
                 <h2 className="text-xl font-bold text-slate-900 mt-2">
-                  Total Hybrid Score: {run.totalScore !== null ? `${(run.totalScore * 100).toFixed(1)}%` : "N/A"}
+                  Total Hybrid Score: {run.totalScore !== null ? `${Number(run.totalScore).toFixed(1)}%` : "N/A"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Calculated AI Confidence: {run.confidence !== null ? `${(run.confidence * 100).toFixed(0)}%` : "N/A"}
+                  Calculated AI Confidence: {run.confidence !== null ? `${(Number(run.confidence) * 100).toFixed(0)}%` : "N/A"}
                 </p>
               </div>
 
@@ -68,19 +70,19 @@ export default function MatchingRunDetailPage({ params }: { params: Promise<{ id
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Dense PGVector (384d)</p>
                     <p className="text-lg font-bold text-indigo-600">
-                      {(run.scoreBreakdown.semanticScore * 100).toFixed(1)}%
+                      {Number(run.scoreBreakdown.semanticScore).toFixed(1)}%
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Rule Engine Score</p>
                     <p className="text-lg font-bold text-emerald-600">
-                      {(run.scoreBreakdown.ruleBasedScore * 100).toFixed(1)}%
+                      {Number(run.scoreBreakdown.ruleBasedScore).toFixed(1)}%
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500">Keywords Score</p>
                     <p className="text-lg font-bold text-amber-600">
-                      {(run.scoreBreakdown.keywordsScore * 100).toFixed(1)}%
+                      {Number(run.scoreBreakdown.keywordsScore).toFixed(1)}%
                     </p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg">

@@ -2,6 +2,7 @@
 
 import React, { use } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApplicationScore } from "@/features/matching/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -11,9 +12,10 @@ import { ArrowLeft, CheckCircle2, AlertTriangle, Cpu, Award } from "lucide-react
 export default function ApplicationScorePage({
   params,
 }: {
-  params: Promise<{ applicationId: string }>;
+  params?: Promise<{ applicationId: string }>;
 }) {
-  const { applicationId } = use(params);
+  const routeParams = useParams();
+  const applicationId = (routeParams?.applicationId as string) || (params ? use(params).applicationId : "");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["applicationScore", applicationId],
@@ -55,7 +57,7 @@ export default function ApplicationScorePage({
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 font-extrabold text-2xl border border-indigo-100">
-                  {(scoreData.finalScore * 100).toFixed(0)}%
+                  {Number(scoreData.finalScore).toFixed(0)}%
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Final Candidate Match Score</h2>
@@ -70,7 +72,7 @@ export default function ApplicationScorePage({
                 <div className="bg-slate-50 rounded-lg p-3 text-right">
                   <p className="text-xs text-slate-500">AI Model Confidence</p>
                   <p className="text-lg font-bold text-slate-900">
-                    {(run.confidence * 100).toFixed(0)}%
+                    {(Number(run.confidence) * 100).toFixed(0)}%
                   </p>
                 </div>
               )}

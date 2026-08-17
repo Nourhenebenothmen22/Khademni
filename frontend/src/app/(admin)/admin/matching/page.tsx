@@ -204,7 +204,7 @@ export default function AIMatchingDashboardPage() {
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-900">{r.id}</td>
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3 font-bold text-slate-900">
-                      {r.totalScore !== null ? `${(r.totalScore * 100).toFixed(1)}%` : "N/A"}
+                      {r.totalScore !== null ? `${Number(r.totalScore).toFixed(1)}%` : "N/A"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">
                       {r.confidence !== null ? `${(r.confidence * 100).toFixed(0)}%` : "N/A"}
