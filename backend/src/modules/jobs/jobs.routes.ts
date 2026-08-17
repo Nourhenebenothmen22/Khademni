@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   authenticate,
+  optionalAuthenticate,
   requireRole,
 } from "../../common/middlewares/auth.middleware.js";
 import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
@@ -31,12 +32,14 @@ const router = Router();
 
 router.get(
   "/",
+  optionalAuthenticate,
   validateQuery(jobPostQuerySchema),
   jobsController.getJobsController,
 );
 
 router.get(
   "/:id",
+  optionalAuthenticate,
   validateParams(jobPostParamsSchema),
   jobsController.getJobByIdController,
 );
@@ -68,7 +71,6 @@ router.delete(
   validateParams(jobPostParamsSchema),
   jobsController.deleteJobController,
 );
-
 
 // ─── Job Keywords ──────────────────────────────────────────────
 router.get('/:jobPostId/keywords', keywordsController.getKeywordsController);

@@ -41,6 +41,33 @@ export const authenticate = async (
   }
 };
 
+export const optionalAuthenticate = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    } else if (req.cookies && typeof req.cookies.access_token === "string") {
+      token = req.cookies.access_token;
+    }
+
+    if (token) {
+      const payload = await verifyAccessToken(token);
+      if (!payload.isMfaPending) {
+        req.user = payload;
+      }
+    }
+  } catch {
+    // Non-blocking: continue as unauthenticated guest
+  }
+  next();
+};
+
 export const requireRole = (...allowedRoles: UserRole[]) => {
   return (
     req: AuthenticatedRequest,

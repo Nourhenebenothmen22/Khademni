@@ -71,7 +71,7 @@ async function saveJobPostVector(jobPostId: string, textContent: string): Promis
         );
       }
     }
-  } catch (err: unknown) {
+  } catch {
     // Non-blocking vector generation
   }
 }
@@ -81,17 +81,16 @@ export async function getJobPosts(
   requesterRole?: string,
   requesterOrgId?: string,
 ) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+  const page = Number(query.page) > 0 ? Number(query.page) : 1;
+  const limit = Number(query.limit) > 0 ? Number(query.limit) : 10;
   const skip = (page - 1) * limit;
 
   const whereClause: Prisma.JobPostWhereInput = {};
 
   if (requesterRole === "ADMIN") {
-    if (!requesterOrgId) {
-      throw new AppError("Forbidden. Organization context is required for admin access.", 403);
+    if (requesterOrgId) {
+      whereClause.organizationId = requesterOrgId;
     }
-    whereClause.organizationId = requesterOrgId;
     if (query.status) {
       whereClause.status = query.status;
     }
@@ -112,10 +111,11 @@ export async function getJobPosts(
   }
 
   const isDefaultPublishedList =
+    !requesterRole &&
     whereClause.status === "PUBLISHED" &&
     !query.search &&
     !query.createdById &&
-    (!query.page || query.page === 1);
+    page === 1;
 
   if (isDefaultPublishedList) {
     const cachedList = await getCache<{ items: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(PUBLISHED_JOBS_CACHE_KEY);
@@ -189,7 +189,7 @@ export async function getJobPostById(
     throw new AppError("Job post not found.", 404);
   }
 
-  if (requesterRole === "ADMIN" && requesterOrgId && jobPost.organizationId !== requesterOrgId) {
+  if (requesterRole === "ADMIN" && requesterOrgId && jobPost.organizationId && jobPost.organizationId !== requesterOrgId) {
     throw new AppError("Job post not found or access denied.", 404);
   }
 
