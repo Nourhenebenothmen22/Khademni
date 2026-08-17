@@ -167,9 +167,29 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/api/v1/matching/status/{queueJobId}",
+  path: "/api/v1/matching/queue-status/{queueJobId}",
   tags: ["AI Matching"],
   summary: "Get status of background matching job",
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    {
+      name: "queueJobId",
+      in: "path",
+      required: true,
+      schema: { type: "string" },
+    },
+  ],
+  responses: {
+    200: { description: "Job status and progress" },
+    404: { description: "Job not found" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/v1/matching/status/{queueJobId}",
+  tags: ["AI Matching"],
+  summary: "Get status of background matching job (Alias)",
   security: [{ bearerAuth: [] }],
   parameters: [
     {

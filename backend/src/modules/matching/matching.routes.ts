@@ -32,6 +32,11 @@ router.get(
   matchingController.getMatchingJobStatusController
 );
 
+router.get(
+  "/status/:queueJobId",
+  matchingController.getMatchingJobStatusController
+);
+
 router.get("/runs", validateQuery(matchingRunQuerySchema), matchingController.getMatchingRunsController);
 
 router.get("/runs/:id", validateParams(matchingRunParamsSchema), matchingController.getMatchingRunController);
