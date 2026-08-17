@@ -112,9 +112,18 @@ if (!parsedEnv.success) {
 }
 
 const rawCors = parsedEnv.data.CORS_ORIGIN;
-const ALLOWED_CORS_ORIGINS = rawCors
-  ? rawCors.split(",").map((origin) => origin.trim()).filter(Boolean)
+const initialOrigins = rawCors
+  ? rawCors.split(",").map((origin) => origin.trim().replace(/\/$/, "")).filter(Boolean)
   : ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"];
+
+const additionalOrigins = [
+  parsedEnv.data.FRONTEND_URL?.trim().replace(/\/$/, ""),
+  parsedEnv.data.APP_URL?.trim().replace(/\/$/, ""),
+].filter(Boolean) as string[];
+
+const ALLOWED_CORS_ORIGINS = Array.from(
+  new Set([...initialOrigins, ...additionalOrigins]),
+);
 
 export const env = {
   ...parsedEnv.data,

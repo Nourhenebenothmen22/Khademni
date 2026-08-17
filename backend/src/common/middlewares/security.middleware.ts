@@ -1,6 +1,6 @@
 import express, { type Express } from "express";
 import helmet from "helmet";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
@@ -13,35 +13,74 @@ export const applySecurityMiddleware = (app: Express): void => {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     }),
   );
 
-  const allowedOrigins = env.ALLOWED_CORS_ORIGINS;
-
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
-          callback(null, true);
-        } else {
-          callback(null, false);
-        }
-      },
-      credentials: true,
-      methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token", "X-Organization-Id", "X-Tenant-Id"],
-      exposedHeaders: ["X-Request-ID", "X-CSRF-Token"],
-    }),
+  const allowedOriginsSet = new Set(
+    env.ALLOWED_CORS_ORIGINS.map((o) => o.trim().replace(/\/$/, "")),
   );
+
+  const corsOptions: CorsOptions = {
+    origin: (requestOrigin, callback) => {
+      // Allow non-browser requests (mobile apps, curl, server-to-server, health checks) with no origin header
+      if (!requestOrigin) {
+        return callback(null, true);
+      }
+
+      const normalizedOrigin = requestOrigin.trim().replace(/\/$/, "");
+
+      if (
+        allowedOriginsSet.has("*") ||
+        allowedOriginsSet.has(normalizedOrigin) ||
+        allowedOriginsSet.has(requestOrigin)
+      ) {
+        return callback(null, true);
+      }
+
+      logger.warn(
+        { origin: requestOrigin, allowedOrigins: Array.from(allowedOriginsSet) },
+        "Request blocked by CORS policy: Origin not allowed",
+      );
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Request-ID",
+      "x-request-id",
+      "X-CSRF-Token",
+      "x-csrf-token",
+      "X-Organization-Id",
+      "x-organization-id",
+      "X-Tenant-Id",
+      "x-tenant-id",
+      "Accept",
+      "Origin",
+      "X-Requested-With",
+    ],
+    exposedHeaders: [
+      "X-Request-ID",
+      "X-CSRF-Token",
+      "x-csrf-token",
+    ],
+    optionsSuccessStatus: 200,
+    maxAge: 86400,
+  };
+
+  app.use(cors(corsOptions));
 
   app.use(
     pinoHttp({
       logger,
       redact: {
-        paths: ["req.headers.authorization", "req.headers.cookie", "req.headers['x-csrf-token']"],
+        paths: [
+          "req.headers.authorization",
+          "req.headers.cookie",
+          "req.headers['x-csrf-token']",
+        ],
         censor: "[REDACTED]",
       },
     }),

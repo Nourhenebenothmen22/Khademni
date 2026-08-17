@@ -23,7 +23,7 @@ export function issueCsrfToken(req: Request, res: Response): void {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: false, // Accessible to frontend JS to read and echo in X-CSRF-Token header
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: "lax",
     path: "/",
   });
 
