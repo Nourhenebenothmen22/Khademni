@@ -8,7 +8,9 @@ const REFRESH_SECRET = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 export interface TokenPayload {
   userId: string;
   role: string;
-  organizationId?: string;
+  organizationId?: string | null;
+  email?: string;
+  sessionId?: string;
   isMfaPending?: boolean;
   isSuperAdmin?: boolean;
 }

@@ -49,8 +49,8 @@ export async function loginController(
     const result = await authService.loginUser(req.body, ip, userAgent);
 
     if (result.mfaRequired) {
-      res.clearCookie("access_token");
-      res.clearCookie("refresh_token");
+      res.clearCookie("access_token", { path: "/" });
+      res.clearCookie("refresh_token", { path: "/" });
       res.status(200).json({
         success: true,
         data: {
@@ -67,7 +67,8 @@ export async function loginController(
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
@@ -76,7 +77,8 @@ export async function loginController(
       res.cookie("access_token", result.accessToken, {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+        path: "/",
         maxAge: 15 * 60 * 1000,
       });
     }
@@ -107,14 +109,16 @@ export async function loginMfaController(
     res.cookie("refresh_token", result.refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("access_token", result.accessToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -156,14 +160,16 @@ export async function refreshController(
     res.cookie("refresh_token", result.refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.cookie("access_token", result.accessToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -190,8 +196,8 @@ export async function logoutController(
       await authService.logoutSession(refreshToken);
     }
 
-    res.clearCookie("access_token");
-    res.clearCookie("refresh_token");
+    res.clearCookie("access_token", { path: "/" });
+    res.clearCookie("refresh_token", { path: "/" });
 
     res.status(200).json({
       success: true,
