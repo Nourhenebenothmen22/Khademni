@@ -41,9 +41,16 @@ export async function getDashboardStats(organizationId: string) {
     })
   ]);
 
+  const totalJobPosts = jobsByStatus.reduce((acc, curr) => acc + curr._count.id, 0);
+  const totalApplications = applicationsByStatus.reduce((acc, curr) => acc + curr._count.id, 0);
+
   return {
+    totalUsers: totalUsers + distinctApplicants.length,
+    totalJobPosts,
+    totalApplications,
+    applicationsByStatus: applicationsByStatus.map(a => ({ status: a.status, count: a._count.id })),
     users: {
-      total: totalUsers,
+      total: totalUsers + distinctApplicants.length,
       candidates: distinctApplicants.length,
       admins: totalAdmins
     },
