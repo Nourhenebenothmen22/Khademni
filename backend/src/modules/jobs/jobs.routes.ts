@@ -10,12 +10,17 @@ import {
   validateQuery,
   validateParams,
 } from "../../common/middlewares/validate.middleware.js";
+import { z } from "zod";
 import {
   createJobPostSchema,
   updateJobPostSchema,
   jobPostQuerySchema,
   jobPostParamsSchema,
 } from "../../common/validators/job-post.validators.js";
+import { cuidSchema } from "../../common/validators/shared.validators.js";
+import { uploadRateLimiter } from "../../common/middlewares/rate-limit.middleware.js";
+import { upload } from "../../common/middlewares/upload.middleware.js";
+import { applyToJobController } from "../applications/applications.controller.js";
 import * as jobsController from "./jobs.controller.js";
 import * as keywordsController from './job-keywords.controller.js';
 import * as rulesController from './job-matching-rules.controller.js';
@@ -29,6 +34,17 @@ import {
 } from '../../common/validators/job-matching-rule.validators.js';
 
 const router = Router();
+
+// Job Application Upload Route
+router.post(
+  "/:jobId/apply",
+  authenticate,
+  requireTenantAccess,
+  uploadRateLimiter,
+  validateParams(z.object({ jobId: cuidSchema })),
+  upload.single("file"),
+  applyToJobController,
+);
 
 router.get(
   "/",
