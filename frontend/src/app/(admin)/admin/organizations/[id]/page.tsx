@@ -2,13 +2,15 @@
 
 import React, { use } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fetchOrganizationById } from "@/features/organizations/api";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ArrowLeft, Building2 } from "lucide-react";
 
-export default function OrganizationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function OrganizationDetailPage({ params }: { params?: Promise<{ id: string }> }) {
+  const routeParams = useParams();
+  const id = (routeParams?.id as string) || (params ? use(params).id : "");
 
   const { data, isLoading } = useQuery({
     queryKey: ["adminOrgDetail", id],

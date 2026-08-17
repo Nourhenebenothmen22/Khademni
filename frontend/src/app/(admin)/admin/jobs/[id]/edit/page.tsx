@@ -2,6 +2,7 @@
 
 import React, { useState, use } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchJobById,
@@ -18,8 +19,9 @@ import { JobStatus, KeywordType, RuleType } from "@/types/backend";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
-export default function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function EditJobPage({ params }: { params?: Promise<{ id: string }> }) {
+  const routeParams = useParams();
+  const id = (routeParams?.id as string) || (params ? use(params).id : "");
   const queryClient = useQueryClient();
 
   const { data: jobRes } = useQuery({
