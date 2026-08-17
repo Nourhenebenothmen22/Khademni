@@ -10,7 +10,7 @@ export async function getNotificationsController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const query = (req as unknown as { validatedQuery: NotificationQuery }).validatedQuery || (req.query as unknown as NotificationQuery);
+    const query = req.query as unknown as NotificationQuery;
     const result = await notificationsService.getUserNotifications(
       req.user!.userId,
       query,

@@ -1,6 +1,6 @@
 import type { Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "../../common/middlewares/auth.middleware.js";
-import type { ApplicationQuery } from "../../common/validators/application.validators.js";
+import type { ApplicationQuery, MyApplicationsQuery } from "../../common/validators/application.validators.js";
 import { AppError } from "../../common/errors/app-error.js";
 import * as applicationsService from "./applications.service.js";
 
@@ -80,7 +80,7 @@ export async function getApplicationsController(
 ): Promise<void> {
   try {
     const organizationId = getOrganizationId(req);
-    const query = (req as unknown as { validatedQuery: ApplicationQuery }).validatedQuery || (req.query as unknown as ApplicationQuery);
+    const query = req.query as unknown as ApplicationQuery;
     const result = await applicationsService.getApplications(query, organizationId);
 
     res.status(200).json({
@@ -126,7 +126,7 @@ export async function getMyApplicationsController(
 ): Promise<void> {
   try {
     const candidateId = req.user!.userId;
-    const query = (req as unknown as { validatedQuery: ApplicationQuery }).validatedQuery || (req.query as unknown as ApplicationQuery);
+    const query = req.query as unknown as MyApplicationsQuery;
     const result = await applicationsService.getCandidateApplications(candidateId, query);
 
     res.status(200).json({

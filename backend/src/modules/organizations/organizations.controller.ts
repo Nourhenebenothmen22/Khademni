@@ -141,7 +141,7 @@ export async function getOrganizationsController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const query = (req as unknown as { validatedQuery: OrganizationQuery }).validatedQuery || (req.query as unknown as OrganizationQuery);
+    const query = req.query as unknown as OrganizationQuery;
     const result = await organizationsService.getOrganizations(query);
 
     res.status(200).json({
