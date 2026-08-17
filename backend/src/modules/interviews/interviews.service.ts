@@ -127,7 +127,7 @@ export async function scheduleInterview(
         interviewers: { include: { user: { select: { id: true, fullName: true, email: true } } } },
       },
     });
-  });
+  }, { maxWait: 20000, timeout: 45000 });
 
   if (!interview) {
     throw new AppError("Failed to schedule interview.", 500);
@@ -484,7 +484,7 @@ export async function submitScorecard(
       where: { id: sc.id },
       include: { criteriaScores: true, interviewer: { select: { id: true, fullName: true } } },
     });
-  });
+  }, { maxWait: 20000, timeout: 45000 });
 
   logAuditAction({
     userId: interviewerId,

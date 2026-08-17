@@ -444,7 +444,7 @@ export async function refreshSession(
     }
 
     throw new AppError("Invalid or expired refresh token session.", 401);
-  }, { timeout: 20000, maxWait: 10000 });
+  }, { timeout: 45000, maxWait: 25000 });
 }
 
 export async function logoutSession(refreshToken: string) {

@@ -6,7 +6,7 @@ import { logger } from "./logger.js";
 
 const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
 
-const prismaClient = new PrismaClient({
+const basePrisma = new PrismaClient({
   adapter,
   log: [{ level: "query", emit: "event" }],
 });
@@ -24,7 +24,7 @@ function parseTarget(target: string): { model: string; action: string } {
   };
 }
 
-prismaClient.$on("query", (event: Prisma.QueryEvent) => {
+basePrisma.$on("query", (event: Prisma.QueryEvent) => {
   const { model, action } = parseTarget(event.target);
   const { query, params, duration } = event;
   const threshold = env.SLOW_QUERY_THRESHOLD_MS;
@@ -47,12 +47,42 @@ prismaClient.$on("query", (event: Prisma.QueryEvent) => {
   }
 });
 
+const extendedPrisma = basePrisma.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ args, query }) {
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            return await query(args);
+          } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            const isTransient =
+              errorMsg.includes("Connection terminated unexpectedly") ||
+              errorMsg.includes("Connection closed") ||
+              errorMsg.includes("closed unexpectedly") ||
+              errorMsg.includes("timed out");
+
+            if (retries > 1 && isTransient) {
+              retries--;
+              logger.warn({ errorMsg, retriesLeft: retries }, "Retrying transient database query");
+              await new Promise((r) => setTimeout(r, 300));
+              continue;
+            }
+            throw err;
+          }
+        }
+      },
+    },
+  },
+});
+
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: typeof extendedPrisma | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? prismaClient;
+export const prisma = (globalForPrisma.prisma ?? extendedPrisma) as unknown as PrismaClient;
 
 if (env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  globalForPrisma.prisma = extendedPrisma;
 }
