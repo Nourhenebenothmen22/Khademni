@@ -277,22 +277,34 @@ export default function CandidateDashboardPage() {
                 </p>
               </div>
 
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2.5 pt-1">
                 {recommendedJobs.length > 0 ? (
                   recommendedJobs.map((job: JobPost) => (
-                    <Link
+                    <div
                       key={job.id}
-                      href={`/jobs/${job.id}`}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-indigo-50/60 border border-slate-100 transition-colors group"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-indigo-100 transition-colors"
                     >
-                      <div>
-                        <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#282276] transition-colors">
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs font-extrabold text-slate-900 truncate">
                           {job.title}
                         </p>
-                        <p className="text-[11px] text-slate-400 font-semibold">{job.organization?.name || "Khademni Partner School"}</p>
+                        <p className="text-[11px] text-slate-400 font-semibold truncate">{job.organization?.name || "Khademni Partner School"}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#282276]" />
-                    </Link>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg shadow-2xs hover:bg-slate-50 transition-colors"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/jobs/${job.id}#apply-section`}
+                          className="px-2.5 py-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors"
+                        >
+                          Apply
+                        </Link>
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <p className="text-slate-500 text-xs py-2 text-center">No open positions published currently.</p>
