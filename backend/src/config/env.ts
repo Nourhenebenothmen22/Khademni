@@ -32,9 +32,6 @@ const envSchema = z
     // Distributed Rate Limiting & Redis (optional)
     REDIS_URL: z.string().optional(),
 
-    // Secrets Manager Provider (env, aws, vault)
-    SECRETS_PROVIDER: z.enum(["env", "aws", "vault"]).default("env"),
-
     // CSRF Configuration
     CSRF_SECRET: z.string().default("khademni_csrf_secret_token_key_32chars"),
 
