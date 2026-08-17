@@ -26,9 +26,9 @@ export default function PublicJobBoardPage() {
 
   const handleApplyClick = (jobId: string) => {
     if (!isAuthenticated) {
-      router.push(`/login?redirect=${encodeURIComponent(`/jobs/${jobId}#apply-section`)}`);
+      router.push(`/login?redirect=${encodeURIComponent(`/jobs/${jobId}`)}`);
     } else {
-      router.push(`/jobs/${jobId}#apply-section`);
+      router.push(`/jobs/${jobId}`);
     }
   };
 
