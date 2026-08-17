@@ -597,9 +597,25 @@ async function runIntegrationTest() {
     console.error('❌ Integration Test Failed:', error);
     process.exitCode = 1;
   } finally {
+    if (jobId) {
+      await prisma.jobKeyword.deleteMany({ where: { jobPostId: jobId } }).catch(() => {});
+      await prisma.jobMatchingRule.deleteMany({ where: { jobPostId: jobId } }).catch(() => {});
+      await prisma.application.deleteMany({ where: { jobPostId: jobId } }).catch(() => {});
+      await prisma.jobPost.delete({ where: { id: jobId } }).catch(() => {});
+    }
+    if (candidateUserId) {
+      await prisma.user.delete({ where: { id: candidateUserId } }).catch(() => {});
+    }
+    if (adminUserId) {
+      await prisma.user.delete({ where: { id: adminUserId } }).catch(() => {});
+    }
+    if (orgId) {
+      await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
+    }
     if (server) {
       server.close();
     }
+    await prisma.$disconnect().catch(() => {});
   }
 }
 
