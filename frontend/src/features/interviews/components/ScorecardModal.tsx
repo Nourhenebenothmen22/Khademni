@@ -34,7 +34,7 @@ export function ScorecardModal({
   interviewType,
 }: ScorecardModalProps) {
   const [loading, setLoading] = useState(false);
-  const [recommendation, setRecommendation] = useState<ScorecardRecommendation>("RECOMMENDED" as ScorecardRecommendation);
+  const [recommendation, setRecommendation] = useState<ScorecardRecommendation>("HIRE");
   const [overallNotes, setOverallNotes] = useState("");
   const [scores, setScores] = useState<Record<string, { score: number; comment: string }>>(
     DEFAULT_CRITERIA.reduce((acc, cur, idx) => ({ ...acc, [idx]: { score: 4, comment: "" } }), {}),
