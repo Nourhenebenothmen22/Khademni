@@ -5,21 +5,27 @@ import { Eye, EyeOff, LucideIcon } from "lucide-react";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  rightLabel?: React.ReactNode;
   error?: string;
   helperText?: string;
   icon?: LucideIcon;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, icon: Icon, className = "", id, disabled, type = "text", ...props }, ref) => {
+  ({ label, rightLabel, error, helperText, icon: Icon, className = "", id, disabled, type = "text", ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
     return (
       <div className="w-full space-y-1">
-        {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
-            {label}
-          </label>
+        {(label || rightLabel) && (
+          <div className="flex items-center justify-between">
+            {label && (
+              <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
+                {label}
+              </label>
+            )}
+            {rightLabel}
+          </div>
         )}
         <div className="relative flex items-center">
           {Icon && (
@@ -59,7 +65,7 @@ export interface PasswordInputProps extends Omit<InputProps, "type"> {
 }
 
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ label, error, helperText, icon: Icon, className = "", id, disabled, showToggle = true, ...props }, ref) => {
+  ({ label, rightLabel, error, helperText, icon: Icon, className = "", id, disabled, showToggle = true, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
@@ -69,10 +75,15 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
 
     return (
       <div className="w-full space-y-1">
-        {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
-            {label}
-          </label>
+        {(label || rightLabel) && (
+          <div className="flex items-center justify-between">
+            {label && (
+              <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
+                {label}
+              </label>
+            )}
+            {rightLabel}
+          </div>
         )}
         <div className="relative flex items-center">
           {Icon && (

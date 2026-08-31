@@ -1,6 +1,7 @@
 import type { ISemanticProvider, SemanticEmbeddingResult } from "../semantic-provider.interface.js";
 import { TfidfSemanticProvider } from "./tfidf-semantic.provider.js";
 import { logger } from "../../../lib/logger.js";
+import { env as appEnv } from "../../../config/env.js";
 
 type ExtractorFunction = (text: string, options?: { pooling?: string; normalize?: boolean }) => Promise<{ data: Float32Array | number[] }>;
 
@@ -9,11 +10,11 @@ let pipelinePromise: Promise<ExtractorFunction> | null = null;
 async function getExtractorPipeline(): Promise<ExtractorFunction> {
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
-      const { pipeline, env } = await import("@xenova/transformers");
-      env.allowLocalModels = true;
-      env.allowRemoteModels = true;
+      const { pipeline, env: xenovaEnv } = await import("@xenova/transformers");
+      xenovaEnv.allowLocalModels = true;
+      xenovaEnv.allowRemoteModels = true;
 
-      const pipelineCall = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+      const pipelineCall = pipeline("feature-extraction", appEnv.ONNX_MODEL_NAME);
 
       const timeoutCall = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("ONNX model load timeout (5000ms limit reached)")), 5000),
@@ -104,7 +105,7 @@ export class OnnxSemanticProvider implements ISemanticProvider {
         vectorSimilarity: Math.round(cosineSim * 10000) / 10000,
         providerName: this.name,
         metadata: {
-          model: "Xenova/all-MiniLM-L6-v2",
+          model: appEnv.ONNX_MODEL_NAME,
           vectorDimension: jobVector.length,
           onnxActive: true,
           inputLengthJob: jobText.length,

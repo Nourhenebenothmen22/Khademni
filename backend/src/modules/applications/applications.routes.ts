@@ -20,7 +20,7 @@ import * as applicationsController from "./applications.controller.js";
 
 const router = Router();
 
-router.use(authenticate, requireTenantAccess);
+router.use(authenticate);
 
 router.get(
   "/me",
@@ -37,14 +37,16 @@ router.get(
 
 router.get(
   "/",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateQuery(applicationQuerySchema),
   applicationsController.getApplicationsController,
 );
 
 router.patch(
   "/:id/status",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateParams(applicationParamsSchema),
   validateBody(updateApplicationStatusSchema),
   applicationsController.updateApplicationStatusController,
@@ -52,13 +54,15 @@ router.patch(
 
 router.post(
   "/:id/withdraw",
+  requireRole("CANDIDATE"),
   validateParams(applicationParamsSchema),
   applicationsController.withdrawApplicationController,
 );
 
 router.delete(
   "/:id",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateParams(applicationParamsSchema),
   applicationsController.deleteApplicationController,
 );

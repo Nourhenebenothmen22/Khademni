@@ -15,6 +15,7 @@ import {
 } from "./calendar.service.js";
 import { createMeetingLink } from "./providers/meeting-provider.factory.js";
 import { isValidTransition } from "../applications/status-machine.js";
+import { PAGINATION_CONFIG } from "../../config/constants.js";
 import type {
   ScheduleInterviewInput,
   RescheduleInterviewInput,
@@ -441,12 +442,6 @@ export async function submitScorecard(
       },
     });
 
-    // Touch interview row to acquire row lock and prevent concurrent scorecard status race condition
-    await tx.interview.update({
-      where: { id: interviewId },
-      data: { updatedAt: new Date() },
-    });
-
     if (input.criteriaScores && input.criteriaScores.length > 0) {
       await tx.scorecardCriteriaScore.deleteMany({
         where: { scorecardId: sc.id },
@@ -527,15 +522,17 @@ export async function getInterviewById(
 
 export async function getInterviews(
   query: InterviewQuery,
-  organizationId: string,
+  organizationId?: string,
 ) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+  const page = query.page ?? PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = query.limit ?? PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
-  const whereClause: Prisma.InterviewWhereInput = {
-    organizationId,
-  };
+  const whereClause: Prisma.InterviewWhereInput = {};
+
+  if (organizationId) {
+    whereClause.organizationId = organizationId;
+  }
 
   if (query.status) whereClause.status = query.status as InterviewStatus;
   if (query.candidateId) whereClause.candidateId = query.candidateId;
@@ -577,8 +574,14 @@ export async function getCandidateInterviews(
   candidateId: string,
   query: Partial<InterviewQuery> = {},
 ) {
-  const page = Math.max(1, Number(query.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
+  const page = Math.max(
+    PAGINATION_CONFIG.DEFAULT_PAGE,
+    Number(query.page) || PAGINATION_CONFIG.DEFAULT_PAGE,
+  );
+  const limit = Math.min(
+    PAGINATION_CONFIG.MAX_LIMIT,
+    Math.max(1, Number(query.limit) || PAGINATION_CONFIG.DEFAULT_LIMIT),
+  );
   const skip = (page - 1) * limit;
 
   const where: Prisma.InterviewWhereInput = {

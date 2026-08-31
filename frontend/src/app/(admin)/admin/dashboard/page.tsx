@@ -18,7 +18,7 @@ export default function AdminDashboardPage() {
   const statusData = stats?.applicationsByStatus || [];
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Admin ATS Dashboard</h1>

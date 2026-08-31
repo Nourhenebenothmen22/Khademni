@@ -71,10 +71,12 @@ export async function rerankCandidatesWithCrossEncoder(
 
 /**
  * Executes Enterprise Hybrid Search (Dense PgVector 384d + Sparse BM25 tsvector) with Reciprocal Rank Fusion (RRF).
+ * Results are strictly scoped to the calling organization — no cross-tenant leakage.
  */
 export async function executeHybridRrfSearch(
   denseVector: number[],
   searchQuery: string,
+  organizationId: string,
   limit = 20,
 ): Promise<HybridSearchResult[]> {
   try {
@@ -97,6 +99,7 @@ export async function executeHybridRrfSearch(
               RANK() OVER (ORDER BY dense_embedding <=> ${formattedVec}::vector) AS dense_rank,
               1 - (dense_embedding <=> ${formattedVec}::vector) AS cosine_sim
           FROM candidate_hybrid_indexes
+          WHERE organization_id = ${organizationId}
           ORDER BY dense_embedding <=> ${formattedVec}::vector
           LIMIT 50
       ),
@@ -106,7 +109,8 @@ export async function executeHybridRrfSearch(
               RANK() OVER (ORDER BY ts_rank(search_vector, websearch_to_tsquery('simple', ${searchQuery})) DESC) AS sparse_rank,
               ts_rank(search_vector, websearch_to_tsquery('simple', ${searchQuery})) AS fts_score
           FROM candidate_hybrid_indexes
-          WHERE search_vector @@ websearch_to_tsquery('simple', ${searchQuery})
+          WHERE organization_id = ${organizationId}
+            AND search_vector @@ websearch_to_tsquery('simple', ${searchQuery})
           ORDER BY fts_score DESC
           LIMIT 50
       )
@@ -140,3 +144,4 @@ export async function executeHybridRrfSearch(
     return [];
   }
 }
+

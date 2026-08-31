@@ -12,8 +12,14 @@ import {
   verifyRefreshToken,
 } from "../../lib/jwt.js";
 import { generateRandomToken, hashToken } from "../../lib/token.js";
+import { encrypt, decrypt } from "../../lib/encryption.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { env } from "../../config/env.js";
+import {
+  COOKIE_CONFIG,
+  SECURITY_CONFIG,
+  TOKEN_EXPIRATION_CONFIG,
+} from "../../config/constants.js";
 import type {
   LoginInput,
   MfaLoginInput,
@@ -21,6 +27,23 @@ import type {
   VerifyEmailInput,
 } from "../../common/validators/auth.validators.js";
 import type { RegisterUserInput } from "../../common/validators/user.validators.js";
+
+export function getAvailableRoles() {
+  return [
+    {
+      role: "CANDIDATE" as const,
+      label: "Candidate / Teacher",
+      description: "Browse academic job vacancies, submit CV applications, and track interview invitations.",
+      requiresOrganization: false,
+    },
+    {
+      role: "ORGANIZATION_ADMIN" as const,
+      label: "School / Institution Administrator",
+      description: "Create and manage your school recruitment workspace, publish job offers, run AI matching, and schedule interviews.",
+      requiresOrganization: true,
+    },
+  ];
+}
 
 export async function registerUser(input: RegisterUserInput) {
   const existingUser = await prisma.user.findUnique({
@@ -37,26 +60,81 @@ export async function registerUser(input: RegisterUserInput) {
   const passwordHash = await hashPassword(input.password);
   const rawVerificationToken = generateRandomToken();
   const emailVerificationTokenHash = hashToken(rawVerificationToken);
-  const emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  const emailVerificationExpiresAt = new Date(
+    Date.now() + TOKEN_EXPIRATION_CONFIG.EMAIL_VERIFICATION_HOURS * 60 * 60 * 1000,
+  );
 
-  const user = await prisma.user.create({
-    data: {
-      fullName: input.fullName,
-      email: input.email.toLowerCase(),
-      passwordHash,
-      role: "CANDIDATE",
-      isEmailVerified: false,
-      emailVerificationTokenHash,
-      emailVerificationExpiresAt,
-    },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      role: true,
-      isEmailVerified: true,
-      createdAt: true,
-    },
+  const isOrgAdmin = input.role === "ORGANIZATION_ADMIN";
+
+  const user = await prisma.$transaction(async (tx) => {
+    let organizationId: string | null = null;
+
+    if (isOrgAdmin) {
+      const orgName = input.organizationName!.trim();
+      let slug = (
+        input.organizationSlug?.trim().toLowerCase() ||
+        orgName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") ||
+        "school"
+      );
+
+      const existingOrgBySlug = await tx.organization.findUnique({
+        where: { slug },
+      });
+      if (existingOrgBySlug) {
+        slug = `${slug}-${Date.now().toString(36)}`;
+      }
+
+      if (input.organizationDomain?.trim()) {
+        const existingOrgByDomain = await tx.organization.findUnique({
+          where: { domain: input.organizationDomain.trim() },
+        });
+        if (existingOrgByDomain) {
+          throw new AppError(
+            "An organization with this domain already exists.",
+            409,
+          );
+        }
+      }
+
+      const org = await tx.organization.create({
+        data: {
+          name: orgName,
+          slug,
+          domain: input.organizationDomain?.trim() || null,
+          website: input.organizationWebsite?.trim() || (input.organizationDomain?.startsWith("http") ? input.organizationDomain.trim() : null),
+          description: input.organizationDescription?.trim() || null,
+          location: input.organizationLocation?.trim() || null,
+          isActive: true,
+        },
+      });
+
+      organizationId = org.id;
+    }
+
+    return tx.user.create({
+      data: {
+        fullName: input.fullName,
+        email: input.email.toLowerCase(),
+        passwordHash,
+        role: isOrgAdmin ? "ORGANIZATION_ADMIN" : "CANDIDATE",
+        organizationId: isOrgAdmin ? organizationId : null,
+        isEmailVerified: false,
+        emailVerificationTokenHash,
+        emailVerificationExpiresAt,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        organizationId: true,
+        isEmailVerified: true,
+        createdAt: true,
+      },
+    });
   });
 
   sendVerificationEmail(user.email, user.fullName, rawVerificationToken);
@@ -135,8 +213,8 @@ export async function loginUser(
     const failedLoginAttempts = user.failedLoginAttempts + 1;
     let lockedUntil: Date | null = null;
 
-    if (failedLoginAttempts >= 5) {
-      lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes lockout
+    if (failedLoginAttempts >= SECURITY_CONFIG.MAX_FAILED_LOGIN_ATTEMPTS) {
+      lockedUntil = new Date(Date.now() + SECURITY_CONFIG.ACCOUNT_LOCKOUT_MS);
     }
 
     await prisma.user.update({
@@ -191,7 +269,7 @@ export async function loginUser(
     organizationId: user.organizationId ?? undefined,
   });
   const refreshTokenHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS);
 
   await prisma.authSession.create({
     data: {
@@ -222,6 +300,7 @@ export async function loginUser(
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      organizationId: user.organizationId ?? null,
       isEmailVerified: user.isEmailVerified,
       mfaEnabled: user.mfaEnabled,
     },
@@ -255,7 +334,7 @@ export async function loginMfa(
 
   const result = verifySync({
     token: input.code,
-    secret: user.mfaSecret,
+    secret: decrypt(user.mfaSecret),
   });
 
   if (!result.valid) {
@@ -273,7 +352,7 @@ export async function loginMfa(
     organizationId: user.organizationId ?? undefined,
   });
   const refreshTokenHash = hashToken(refreshToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS);
 
   await prisma.authSession.create({
     data: {
@@ -303,6 +382,7 @@ export async function loginMfa(
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      organizationId: user.organizationId ?? null,
       isEmailVerified: user.isEmailVerified,
       mfaEnabled: user.mfaEnabled,
     },
@@ -320,7 +400,7 @@ export async function refreshSession(
 ) {
   const payload = await verifyRefreshToken(refreshToken);
   const tokenHash = hashToken(refreshToken);
-  const GRACE_PERIOD_MS = 10000; // 10s grace period for concurrent retries
+  const GRACE_PERIOD_MS = SECURITY_CONFIG.TOKEN_ROTATION_GRACE_PERIOD_MS;
 
 
   return prisma.$transaction(async (tx) => {
@@ -338,24 +418,39 @@ export async function refreshSession(
 
     if (claimed.count === 1) {
       // Successful claim: This request won the atomic execution race.
+      // Re-read the user from the database to ensure we use current role/status — never stale JWT payload claims.
+      const currentUser = await tx.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true, isActive: true, role: true, organizationId: true },
+      });
+
+      if (!currentUser || !currentUser.isActive) {
+        // Account deactivated or deleted — revoke all sessions for this user
+        await tx.authSession.updateMany({
+          where: { userId: payload.userId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+        throw new AppError("Account is deactivated or no longer exists.", 401);
+      }
+
       const newAccessToken = await signAccessToken({
-        userId: payload.userId,
-        role: payload.role,
-        organizationId: payload.organizationId,
+        userId: currentUser.id,
+        role: currentUser.role,
+        organizationId: currentUser.organizationId ?? undefined,
       });
 
       const newRefreshToken = await signRefreshToken({
-        userId: payload.userId,
-        role: payload.role,
-        organizationId: payload.organizationId,
+        userId: currentUser.id,
+        role: currentUser.role,
+        organizationId: currentUser.organizationId ?? undefined,
       });
 
       const newRefreshTokenHash = hashToken(newRefreshToken);
-      const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const newExpiresAt = new Date(Date.now() + COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS);
 
       await tx.authSession.create({
         data: {
-          userId: payload.userId,
+          userId: currentUser.id,
           refreshTokenHash: newRefreshTokenHash,
           ipAddress: ipAddress ?? undefined,
           userAgent: userAgent ?? undefined,
@@ -383,7 +478,7 @@ export async function refreshSession(
     if (session.revokedAt) {
       const elapsedMs = now.getTime() - session.revokedAt.getTime();
 
-      // Case A: Concurrent retry within 10s grace period -> Issue new tokens gracefully without triggering breach lockout
+      // Case A: Concurrent retry within grace period -> Issue new tokens gracefully without triggering breach lockout
       if (elapsedMs <= GRACE_PERIOD_MS) {
         const newAccessToken = await signAccessToken({
           userId: payload.userId,
@@ -398,7 +493,7 @@ export async function refreshSession(
         });
 
         const newRefreshTokenHash = hashToken(newRefreshToken);
-        const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const newExpiresAt = new Date(Date.now() + COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS);
 
         await tx.authSession.create({
           data: {
@@ -476,7 +571,7 @@ export async function setupMfa(userId: string) {
 
   await prisma.user.update({
     where: { id: userId },
-    data: { mfaSecret: secret },
+    data: { mfaSecret: encrypt(secret) },
   });
 
   return {
@@ -494,7 +589,7 @@ export async function verifyMfa(userId: string, input: MfaVerifyInput) {
 
   const result = verifySync({
     token: input.code,
-    secret: user.mfaSecret,
+    secret: decrypt(user.mfaSecret),
   });
 
   if (!result.valid) {
@@ -526,7 +621,9 @@ export async function requestPasswordReset(email: string) {
     where: { id: user.id },
     data: {
       passwordResetTokenHash: hashedToken,
-      passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      passwordResetExpiresAt: new Date(
+        Date.now() + TOKEN_EXPIRATION_CONFIG.PASSWORD_RESET_HOURS * 60 * 60 * 1000,
+      ),
     },
   });
 

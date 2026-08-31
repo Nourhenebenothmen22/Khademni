@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { nanoid } from "nanoid";
 import { env } from "../config/env.js";
+import { TOKEN_EXPIRATION_CONFIG } from "../config/constants.js";
 
 const ACCESS_SECRET = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 const REFRESH_SECRET = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
@@ -12,7 +13,6 @@ export interface TokenPayload {
   email?: string;
   sessionId?: string;
   isMfaPending?: boolean;
-  isSuperAdmin?: boolean;
 }
 
 export async function signAccessToken(payload: TokenPayload): Promise<string> {
@@ -24,7 +24,7 @@ export async function signAccessToken(payload: TokenPayload): Promise<string> {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("15m")
+    .setExpirationTime(TOKEN_EXPIRATION_CONFIG.ACCESS_TOKEN)
     .sign(ACCESS_SECRET);
 }
 
@@ -52,7 +52,7 @@ export async function signMfaPendingToken(payload: {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("5m")
+    .setExpirationTime(TOKEN_EXPIRATION_CONFIG.MFA_PENDING_TOKEN)
     .sign(ACCESS_SECRET);
 }
 
@@ -78,7 +78,7 @@ export async function signRefreshToken(payload: TokenPayload): Promise<string> {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime(TOKEN_EXPIRATION_CONFIG.REFRESH_TOKEN)
     .sign(REFRESH_SECRET);
 }
 

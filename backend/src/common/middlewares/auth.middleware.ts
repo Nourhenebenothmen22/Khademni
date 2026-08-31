@@ -90,28 +90,3 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
     next();
   };
 };
-
-export const requireSuperAdmin = (
-  req: AuthenticatedRequest,
-  _res: Response,
-  next: NextFunction,
-): void => {
-  if (!req.user) {
-    return next(new AppError("Authentication required.", 401));
-  }
-
-  const isSuperAdmin =
-    req.user.role === "ADMIN" &&
-    (!req.user.organizationId || req.user.isSuperAdmin === true || req.headers["x-super-admin"] === "true");
-
-  if (!isSuperAdmin) {
-    return next(
-      new AppError(
-        "Forbidden. Platform Super Admin clearance is required for global AI model management.",
-        403,
-      ),
-    );
-  }
-
-  next();
-};

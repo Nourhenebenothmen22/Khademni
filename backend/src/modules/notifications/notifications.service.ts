@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../common/errors/app-error.js';
 import { logger } from '../../lib/logger.js';
+import { PAGINATION_CONFIG } from '../../config/constants.js';
 import type { NotificationQuery } from '../../common/validators/notification.validators.js';
 
 interface CreateNotificationInput {
@@ -26,8 +27,8 @@ export async function createNotification(input: CreateNotificationInput) {
 }
 
 export async function getUserNotifications(userId: string, query: NotificationQuery) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const page = query.page ?? PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = query.limit ?? PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
   const whereClause: Record<string, unknown> = { userId };

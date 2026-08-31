@@ -3,6 +3,7 @@ import { TfidfSemanticProvider } from "./tfidf-semantic.provider.js";
 import { OnnxSemanticProvider } from "./onnx-semantic.provider.js";
 import { prisma } from "../../../lib/prisma.js";
 import { logger } from "../../../lib/logger.js";
+import { env } from "../../../config/env.js";
 
 /**
  * PostgreSQL pgvector / Dense Vector Semantic Provider.
@@ -68,7 +69,7 @@ export class PgVectorSemanticProvider implements ISemanticProvider {
           vectorDimension: jobVector.length,
           pgvectorActive: isDbPgvectorUsed,
           hnswIndexUsed: isDbPgvectorUsed,
-          denseEmbeddingModel: "Xenova/all-MiniLM-L6-v2",
+          denseEmbeddingModel: env.ONNX_MODEL_NAME,
         },
       };
     } catch (err: unknown) {

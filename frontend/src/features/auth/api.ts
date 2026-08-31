@@ -1,5 +1,12 @@
 import { apiRequest, fetchCsrfToken, setAccessToken } from "@/lib/api/client";
-import { ApiResponse, User } from "@/types/backend";
+import { ApiResponse, User, UserRole } from "@/types/backend";
+
+export interface AvailableRole {
+  role: UserRole;
+  label: string;
+  description: string;
+  requiresOrganization: boolean;
+}
 
 export interface LoginPayload {
   email: string;
@@ -10,6 +17,17 @@ export interface RegisterPayload {
   fullName: string;
   email: string;
   password?: string;
+  role: UserRole;
+  organizationName?: string;
+  organizationSlug?: string;
+  organizationDomain?: string;
+  organizationWebsite?: string;
+  organizationDescription?: string;
+  organizationLocation?: string;
+}
+
+export async function fetchAvailableRoles(): Promise<ApiResponse<AvailableRole[]>> {
+  return apiRequest<AvailableRole[]>("/auth/roles");
 }
 
 export interface MfaLoginPayload {

@@ -1,14 +1,15 @@
-import argon2 from "argon2";
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { generateRandomToken, hashToken } from "../../lib/token.js";
+import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { sendVerificationEmail } from "../../lib/email.js";
 import { saveFile, getFileStream, deleteFile, fileExists } from "../../lib/file-storage.js";
 import type { UpdateUserInput, ChangePasswordInput } from "../../common/validators/user.validators.js";
 import { env } from "../../config/env.js";
+import { TOKEN_EXPIRATION_CONFIG } from "../../config/constants.js";
 
 export function getAvatarUrl(userId: string, avatarKey: string | null): string | null {
   return avatarKey ? `${env.APP_URL}/api/v1/users/${userId}/avatar` : null;
@@ -90,7 +91,9 @@ export async function updateUserProfile(
 
     rawVerificationToken = generateRandomToken();
     emailVerificationTokenHash = hashToken(rawVerificationToken);
-    emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    emailVerificationExpiresAt = new Date(
+      Date.now() + TOKEN_EXPIRATION_CONFIG.EMAIL_VERIFICATION_HOURS * 60 * 60 * 1000,
+    );
   }
 
   const updatedUser = await prisma.user.update({
@@ -274,12 +277,15 @@ export async function changePassword(
     throw new AppError("User profile not found.", 404);
   }
 
-  const isPasswordValid = await argon2.verify(user.passwordHash, input.currentPassword);
+  const isPasswordValid = await verifyPassword(
+    input.currentPassword,
+    user.passwordHash,
+  );
   if (!isPasswordValid) {
     throw new AppError("Current password is incorrect.", 400);
   }
 
-  const newPasswordHash = await argon2.hash(input.newPassword);
+  const newPasswordHash = await hashPassword(input.newPassword);
 
   await prisma.$transaction([
     prisma.user.update({

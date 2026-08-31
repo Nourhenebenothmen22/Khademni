@@ -9,8 +9,18 @@ export const createOrganizationSchema = z.object({
 
 export const updateOrganizationSchema = z.object({
   name: z.string().min(2).max(120).optional(),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
+  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens").optional(),
   domain: z.string().max(120).nullable().optional(),
+  website: z.string().max(200).nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  industry: z.string().max(100).nullable().optional(),
+  location: z.string().max(200).nullable().optional(),
+  address: z.string().max(300).nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  email: z.string().email().max(120).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  socialLinks: z.record(z.string(), z.string()).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

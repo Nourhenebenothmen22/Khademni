@@ -17,11 +17,18 @@ function MfaLoginContent({ searchParams }: { searchParams: Promise<{ userId?: st
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const getSafeRedirectUrl = (defaultFallback: string): string => {
-    if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
-      return redirectParam;
+  const getSafeRedirectUrl = (role: string, redirect: string | null): string => {
+    if (role === "ORGANIZATION_ADMIN") {
+      if (redirect && redirect.startsWith("/admin") && !redirect.startsWith("//")) {
+        return redirect;
+      }
+      return "/admin/dashboard";
+    } else {
+      if (redirect && (redirect.startsWith("/candidate") || redirect.startsWith("/jobs")) && !redirect.startsWith("//")) {
+        return redirect;
+      }
+      return "/candidate/dashboard";
     }
-    return defaultFallback;
   };
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
@@ -39,8 +46,7 @@ function MfaLoginContent({ searchParams }: { searchParams: Promise<{ userId?: st
         setAuthUser(res.data.user, res.data.accessToken);
         toast.success("MFA authentication successful!");
         
-        const fallback = res.data.user.role === "ADMIN" ? "/admin/dashboard" : "/candidate/dashboard";
-        const destination = getSafeRedirectUrl(fallback);
+        const destination = getSafeRedirectUrl(res.data.user.role, redirectParam || null);
         router.push(destination);
       } else {
         toast.error(res.message || "Invalid 6-digit MFA code");

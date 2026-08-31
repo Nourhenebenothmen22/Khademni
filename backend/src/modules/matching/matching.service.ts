@@ -3,6 +3,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { logger } from "../../lib/logger.js";
 import { parseDocument } from "./document-parser.service.js";
 import { getSemanticProvider } from "./semantic-factory.js";
+import { PAGINATION_CONFIG } from "../../config/constants.js";
 import type { MatchingRunQuery } from "../../common/validators/matching-run.validators.js";
 import type { ScoreRecommendation } from "../../generated/prisma/client.js";
 
@@ -150,7 +151,7 @@ export function calculateDynamicConfidence(factors: {
 
 export async function runMatching(
   applicationId: string,
-  modelId: string,
+  modelId?: string,
   organizationId?: string,
 ) {
   const application = await prisma.application.findFirst({
@@ -172,16 +173,24 @@ export async function runMatching(
   if (!application) throw new AppError("Application not found or access denied", 404);
   if (!application.jobPost) throw new AppError("Job post not found", 404);
 
-  const model = await prisma.aIMatchingModel.findUnique({
-    where: { id: modelId },
-  });
+  let model;
+  if (modelId) {
+    model = await prisma.aIMatchingModel.findUnique({
+      where: { id: modelId },
+    });
+  } else {
+    model = await prisma.aIMatchingModel.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
 
-  if (!model) throw new AppError("Model not found", 404);
+  if (!model) throw new AppError("No active AI Matching Model found.", 404);
 
   let run = await prisma.matchingRun.create({
     data: {
       applicationId,
-      modelId,
+      modelId: model.id,
       status: "PENDING",
     },
   });
@@ -469,7 +478,7 @@ export async function runMatching(
 
 export async function runMatchingForJob(
   jobPostId: string,
-  modelId: string,
+  modelId?: string,
   organizationId?: string,
 ) {
   const job = await prisma.jobPost.findFirst({
@@ -484,7 +493,7 @@ export async function runMatchingForJob(
 
   const runs = [];
   for (const app of applications) {
-    const run = await runMatching(app.id, modelId);
+    const run = await runMatching(app.id, modelId, organizationId);
     runs.push(run);
   }
 
@@ -514,8 +523,8 @@ export async function getMatchingRuns(
   query: MatchingRunQuery,
   organizationId?: string,
 ) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+  const page = query.page ?? PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = query.limit ?? PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};

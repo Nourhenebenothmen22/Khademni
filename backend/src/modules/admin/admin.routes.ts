@@ -10,7 +10,7 @@ import * as adminController from "./admin.controller.js";
 
 const router = Router();
 
-router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ORGANIZATION_ADMIN"));
 
 router.get("/stats", adminController.getDashboardStatsController);
 

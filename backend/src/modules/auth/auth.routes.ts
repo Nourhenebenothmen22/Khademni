@@ -23,6 +23,7 @@ import * as authController from "./auth.controller.js";
 const router = Router();
 
 router.get("/csrf", issueCsrfToken);
+router.get("/roles", authController.getAvailableRolesController);
 
 router.post(
   "/register",

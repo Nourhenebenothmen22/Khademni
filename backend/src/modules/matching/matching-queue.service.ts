@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logger } from "../../lib/logger.js";
-import { redisClient } from "../../lib/redis.js";
+import { redisClient, getBullMqRedisOptions } from "../../lib/redis.js";
 import { env } from "../../config/env.js";
 import { runMatching } from "./matching.service.js";
 
@@ -35,7 +35,7 @@ let matchingWorker: Worker | null = null;
 
 if (env.REDIS_URL) {
   try {
-    const connection = { url: env.REDIS_URL };
+    const connection = getBullMqRedisOptions();
     matchingQueue = new Queue(QUEUE_NAME, { connection });
 
     matchingWorker = new Worker(
@@ -200,7 +200,7 @@ async function processMatchingQueueJob(
       const appId = applicationIds[i];
       if (!appId) continue;
       try {
-        await runMatching(appId, modelId);
+        await runMatching(appId, modelId, state.organizationId ?? undefined);
         state.processedCount++;
       } catch (error) {
         state.failedCount++;

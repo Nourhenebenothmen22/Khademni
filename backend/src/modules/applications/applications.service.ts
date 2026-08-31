@@ -9,6 +9,7 @@ import { sendApplicationStatusEmail } from "../../lib/email.js";
 import { createNotification } from "../notifications/notifications.service.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { isValidTransition } from "./status-machine.js";
+import { PAGINATION_CONFIG } from "../../config/constants.js";
 import type {
   UpdateApplicationStatusInput,
   ApplicationQuery,
@@ -131,14 +132,14 @@ export async function getDownloadStream(
   role: string,
   organizationId?: string,
 ) {
-  if (role === "ADMIN" && !organizationId) {
+  if (role === "ORGANIZATION_ADMIN" && !organizationId) {
     throw new AppError("Organization context is required for admin access.", 403);
   }
 
   const application = await prisma.application.findFirst({
     where: {
       id: applicationId,
-      ...(role === "ADMIN" ? { jobPost: { organizationId } } : {}),
+      ...(role === "ORGANIZATION_ADMIN" && organizationId ? { jobPost: { organizationId } } : {}),
       ...(role === "CANDIDATE" ? { candidateId: userId } : {}),
     },
   });
@@ -163,16 +164,23 @@ export async function updateApplicationStatus(
   applicationId: string,
   changedById: string,
   input: UpdateApplicationStatusInput,
-  organizationId: string,
+  organizationId?: string,
 ) {
   const application = await prisma.application.findFirst({
     where: {
       id: applicationId,
-      jobPost: { organizationId },
+      ...(organizationId ? { jobPost: { organizationId } } : {}),
     },
     include: {
       candidate: { select: { id: true, fullName: true, email: true } },
-      jobPost: { select: { id: true, title: true } },
+      jobPost: {
+        select: {
+          id: true,
+          title: true,
+          organizationId: true,
+          organization: { select: { name: true } },
+        },
+      },
     },
   });
 
@@ -210,11 +218,8 @@ export async function updateApplicationStatus(
           select: {
             id: true,
             title: true,
-            organization: {
-              select: {
-                name: true,
-              },
-            },
+            organizationId: true,
+            organization: { select: { name: true } },
           },
         },
       },
@@ -255,7 +260,7 @@ export async function updateApplicationStatus(
 
   logAuditAction({
     userId: changedById,
-    organizationId,
+    organizationId: organizationId || application.jobPost.organizationId || undefined,
     action: "APPLICATION_STATUS_UPDATED",
     entityType: "Application",
     entityId: applicationId,
@@ -267,19 +272,36 @@ export async function updateApplicationStatus(
 
 export async function getApplications(
   query: ApplicationQuery,
-  organizationId: string,
+  organizationId?: string,
 ) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+  const page = query.page ?? PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = query.limit ?? PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
-  const whereClause: Prisma.ApplicationWhereInput = {
-    jobPost: { organizationId },
-  };
+  const whereClause: Prisma.ApplicationWhereInput = {};
 
-  if (query.status) whereClause.status = query.status;
-  if (query.candidateId) whereClause.candidateId = query.candidateId;
-  if (query.jobPostId) whereClause.jobPostId = query.jobPostId;
+  if (organizationId) {
+    whereClause.jobPost = { organizationId };
+  }
+
+  if (query.status) {
+    whereClause.status = query.status;
+  }
+  if (query.candidateId) {
+    whereClause.candidateId = query.candidateId;
+  }
+  if (query.jobPostId) {
+    whereClause.jobPostId = query.jobPostId;
+  }
+
+  if (query.search) {
+    whereClause.OR = [
+      { candidate: { fullName: { contains: query.search, mode: "insensitive" } } },
+      { candidate: { email: { contains: query.search, mode: "insensitive" } } },
+      { jobPost: { title: { contains: query.search, mode: "insensitive" } } },
+      { trackingCode: { contains: query.search, mode: "insensitive" } },
+    ];
+  }
 
   const [total, items] = await Promise.all([
     prisma.application.count({ where: whereClause }),
@@ -293,7 +315,7 @@ export async function getApplications(
           select: { id: true, fullName: true, email: true },
         },
         jobPost: {
-          select: { id: true, title: true, status: true },
+          select: { id: true, title: true, status: true, organizationId: true },
         },
         documents: true,
         score: true,
@@ -316,8 +338,14 @@ export async function getCandidateApplications(
   candidateId: string,
   query: Partial<MyApplicationsQuery> = {},
 ) {
-  const page = Math.max(1, Number(query.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
+  const page = Math.max(
+    PAGINATION_CONFIG.DEFAULT_PAGE,
+    Number(query.page) || PAGINATION_CONFIG.DEFAULT_PAGE,
+  );
+  const limit = Math.min(
+    PAGINATION_CONFIG.MAX_LIMIT,
+    Math.max(1, Number(query.limit) || PAGINATION_CONFIG.DEFAULT_LIMIT),
+  );
   const skip = (page - 1) * limit;
 
   const where: Prisma.ApplicationWhereInput = {
@@ -435,13 +463,13 @@ export async function withdrawApplication(
 
 export async function deleteApplication(
   applicationId: string,
-  organizationId: string,
+  organizationId: string | undefined,
   userId: string,
 ) {
   const application = await prisma.application.findFirst({
     where: {
       id: applicationId,
-      jobPost: { organizationId },
+      ...(organizationId ? { jobPost: { organizationId } } : {}),
     },
     include: {
       documents: true,

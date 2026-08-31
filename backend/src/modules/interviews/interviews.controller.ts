@@ -1,5 +1,8 @@
+import crypto from "node:crypto";
 import type { Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "../../common/middlewares/auth.middleware.js";
+import { AppError } from "../../common/errors/app-error.js";
+import { env } from "../../config/env.js";
 import * as interviewsService from "./interviews.service.js";
 import type {
   ScheduleInterviewInput,
@@ -41,9 +44,13 @@ export async function getInterviewsController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const organizationId = req.user!.organizationId!;
-    const query = req.query as unknown as InterviewQuery;
+    const organizationId = req.user?.organizationId ?? undefined;
 
+    if (!organizationId || req.user?.role !== "ORGANIZATION_ADMIN") {
+      throw new AppError("Organization administrator context is required.", 403);
+    }
+
+    const query = req.query as unknown as InterviewQuery;
     const result = await interviewsService.getInterviews(query, organizationId);
 
     res.json({
@@ -220,6 +227,36 @@ export async function brevoWebhookController(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const webhookSecret = env.BREVO_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const signature =
+        (req.headers["x-brevo-signature"] as string | undefined) ||
+        (req.headers["x-sib-signature"] as string | undefined) ||
+        (req.headers["signature"] as string | undefined);
+
+      if (!signature) {
+        throw new AppError("Missing webhook signature header.", 401);
+      }
+
+      const rawPayload = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      const computedHmac = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(rawPayload)
+        .digest("hex");
+
+      const sigBuffer = Buffer.from(signature.trim(), "utf-8");
+      const computedBuffer = Buffer.from(computedHmac, "utf-8");
+
+      if (
+        sigBuffer.length !== computedBuffer.length ||
+        !crypto.timingSafeEqual(sigBuffer, computedBuffer)
+      ) {
+        throw new AppError("Invalid webhook signature.", 401);
+      }
+    } else if (env.NODE_ENV === "production") {
+      throw new AppError("Webhook processing unavailable: secret unconfigured in production.", 500);
+    }
+
     // Process Brevo email event notification payload
     const event = req.body as { event?: string; email?: string; messageId?: string };
     
@@ -232,3 +269,4 @@ export async function brevoWebhookController(
     next(error);
   }
 }
+

@@ -6,7 +6,7 @@ import type { Response, NextFunction } from "express";
 describe("requireTenantAccess Middleware", () => {
   const createMockReqRes = (userOrgId?: string, requestedOrgId?: string) => {
     const req = {
-      user: userOrgId ? { userId: "user-123", role: "ADMIN", organizationId: userOrgId } : undefined,
+      user: userOrgId ? { userId: "user-123", role: "ORGANIZATION_ADMIN", organizationId: userOrgId } : undefined,
       params: requestedOrgId ? { organizationId: requestedOrgId } : {},
       query: {},
       headers: {},

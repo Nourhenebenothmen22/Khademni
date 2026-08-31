@@ -30,6 +30,8 @@ describe("Jobs & Matching Rules API Integration Tests", () => {
       data: {
         name: `Jobs Test Org ${Date.now()}`,
         slug: `jobs-test-org-${Date.now()}`,
+        description: "A leading higher education institution.",
+        location: "Tunis, Tunisia",
       },
     });
     orgId = org.id;
@@ -40,7 +42,7 @@ describe("Jobs & Matching Rules API Integration Tests", () => {
         email: `admin_jobs_${Date.now()}@example.com`,
         passwordHash: "argon2-hash-placeholder",
         fullName: "Jobs Admin Tester",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: orgId,
       },
     });
@@ -58,7 +60,7 @@ describe("Jobs & Matching Rules API Integration Tests", () => {
 
     adminToken = await signAccessToken({
       userId: adminUserId,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: orgId,
     });
 

@@ -20,11 +20,18 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const getSafeRedirectUrl = (defaultFallback: string): string => {
-    if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
-      return redirectParam;
+  const getSafeRedirectUrl = (role: string, redirect: string | null): string => {
+    if (role === "ORGANIZATION_ADMIN") {
+      if (redirect && redirect.startsWith("/admin") && !redirect.startsWith("//")) {
+        return redirect;
+      }
+      return "/admin/dashboard";
+    } else {
+      if (redirect && (redirect.startsWith("/candidate") || redirect.startsWith("/jobs")) && !redirect.startsWith("//")) {
+        return redirect;
+      }
+      return "/candidate/dashboard";
     }
-    return defaultFallback;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,8 +54,7 @@ function LoginForm() {
         setAuthUser(res.data.user, res.data.accessToken);
         toast.success("Successfully signed in!");
         
-        const fallback = res.data.user.role === "ADMIN" ? "/admin/dashboard" : "/candidate/dashboard";
-        const destination = getSafeRedirectUrl(fallback);
+        const destination = getSafeRedirectUrl(res.data.user.role, redirectParam);
         router.push(destination);
       } else {
         toast.error(res.message || "Invalid credentials");
@@ -78,24 +84,19 @@ function LoginForm() {
           icon={Mail}
         />
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-[#282276]">
-              {/* Spacer for alignment */}
-            </span>
+        <PasswordInput
+          label="Password"
+          rightLabel={
             <Link href="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:underline">
               Forgot password?
             </Link>
-          </div>
-          <PasswordInput
-            label="Password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            icon={Lock}
-          />
-        </div>
+          }
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          icon={Lock}
+        />
 
         <button
           type="submit"

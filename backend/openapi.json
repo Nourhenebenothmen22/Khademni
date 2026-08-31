@@ -31,6 +31,8 @@
         "enum": [
           "UNDER_REVIEW",
           "SHORTLISTED",
+          "INTERVIEW_SCHEDULED",
+          "INTERVIEWED",
           "REJECTED",
           "ACCEPTED"
         ]
@@ -109,6 +111,8 @@
               "SUBMITTED",
               "UNDER_REVIEW",
               "SHORTLISTED",
+              "INTERVIEW_SCHEDULED",
+              "INTERVIEWED",
               "REJECTED",
               "ACCEPTED",
               "WITHDRAWN"
@@ -227,6 +231,8 @@
           "SUBMITTED",
           "UNDER_REVIEW",
           "SHORTLISTED",
+          "INTERVIEW_SCHEDULED",
+          "INTERVIEWED",
           "REJECTED",
           "ACCEPTED",
           "WITHDRAWN"
@@ -430,6 +436,19 @@
         },
         "required": [
           "metrics"
+        ]
+      },
+      "cancelInterviewSchema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "changePasswordSchema": {
@@ -846,6 +865,61 @@
           "value"
         ]
       },
+      "createOrgUserSchema": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CANDIDATE",
+              "ADMIN"
+            ],
+            "default": "ADMIN"
+          }
+        },
+        "required": [
+          "fullName",
+          "email",
+          "password"
+        ]
+      },
+      "createOrganizationSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "domain": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
       "createStatusHistorySchema": {
         "type": "object",
         "properties": {
@@ -859,6 +933,8 @@
               "SUBMITTED",
               "UNDER_REVIEW",
               "SHORTLISTED",
+              "INTERVIEW_SCHEDULED",
+              "INTERVIEWED",
               "REJECTED",
               "ACCEPTED",
               "WITHDRAWN"
@@ -870,6 +946,8 @@
               "SUBMITTED",
               "UNDER_REVIEW",
               "SHORTLISTED",
+              "INTERVIEW_SCHEDULED",
+              "INTERVIEWED",
               "REJECTED",
               "ACCEPTED",
               "WITHDRAWN"
@@ -1033,6 +1111,101 @@
         },
         "required": [
           "id"
+        ]
+      },
+      "interviewParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "interviewQuerySchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "RESCHEDULED",
+              "COMPLETED",
+              "CANCELLED",
+              "NO_SHOW"
+            ]
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "jobPostId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "interviewerId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "startTime",
+              "createdAt",
+              "status"
+            ],
+            "default": "startTime"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
+      "interviewStatusEnum": {
+        "type": "string",
+        "enum": [
+          "SCHEDULED",
+          "RESCHEDULED",
+          "COMPLETED",
+          "CANCELLED",
+          "NO_SHOW"
+        ]
+      },
+      "interviewTypeEnum": {
+        "type": "string",
+        "enum": [
+          "SCREENING",
+          "TECHNICAL",
+          "PEDAGOGICAL_DEMO",
+          "BEHAVIORAL",
+          "FINAL_HR"
         ]
       },
       "jobKeywordParamsSchema": {
@@ -1262,6 +1435,16 @@
           }
         }
       },
+      "meetingProviderEnum": {
+        "type": "string",
+        "enum": [
+          "ZOOM",
+          "GOOGLE_MEET",
+          "MS_TEAMS",
+          "CUSTOM_LINK",
+          "IN_PERSON"
+        ]
+      },
       "metricParamsSchema": {
         "type": "object",
         "properties": {
@@ -1282,6 +1465,10 @@
       "mfaLoginSchema": {
         "type": "object",
         "properties": {
+          "mfaToken": {
+            "type": "string",
+            "minLength": 1
+          },
           "userId": {
             "type": "string",
             "format": "cuid"
@@ -1294,7 +1481,7 @@
           }
         },
         "required": [
-          "userId",
+          "mfaToken",
           "code"
         ]
       },
@@ -1321,6 +1508,8 @@
               "SUBMITTED",
               "UNDER_REVIEW",
               "SHORTLISTED",
+              "INTERVIEW_SCHEDULED",
+              "INTERVIEWED",
               "REJECTED",
               "ACCEPTED",
               "WITHDRAWN"
@@ -1407,6 +1596,58 @@
           }
         }
       },
+      "organizationParamsSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "cuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "organizationQuerySchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "name",
+              "slug"
+            ],
+            "default": "createdAt"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      },
       "paginationSchema": {
         "type": "object",
         "properties": {
@@ -1444,6 +1685,30 @@
           "fullName",
           "email",
           "password"
+        ]
+      },
+      "rescheduleInterviewSchema": {
+        "type": "object",
+        "properties": {
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "startTime",
+          "endTime"
         ]
       },
       "resetPasswordRequestSchema": {
@@ -1485,6 +1750,91 @@
           "CUSTOM"
         ]
       },
+      "scheduleInterviewSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "cuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SCREENING",
+              "TECHNICAL",
+              "PEDAGOGICAL_DEMO",
+              "BEHAVIORAL",
+              "FINAL_HR"
+            ],
+            "default": "TECHNICAL"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "default": "UTC"
+          },
+          "meetingProvider": {
+            "type": "string",
+            "enum": [
+              "ZOOM",
+              "GOOGLE_MEET",
+              "MS_TEAMS",
+              "CUSTOM_LINK",
+              "IN_PERSON"
+            ],
+            "default": "CUSTOM_LINK"
+          },
+          "customMeetingUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              }
+            ]
+          },
+          "locationDetails": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "interviewerIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "cuid"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "applicationId",
+          "title",
+          "startTime",
+          "endTime",
+          "interviewerIds"
+        ]
+      },
       "scoreRecommendationEnum": {
         "type": "string",
         "enum": [
@@ -1492,6 +1842,45 @@
           "RECOMMENDED",
           "AVERAGE",
           "NOT_RECOMMENDED"
+        ]
+      },
+      "scorecardCriteriaScoreSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "category",
+          "criterion",
+          "score"
+        ]
+      },
+      "scorecardRecommendationEnum": {
+        "type": "string",
+        "enum": [
+          "STRONG_HIRE",
+          "HIRE",
+          "NEUTRAL",
+          "NO_HIRE",
+          "STRONG_NO_HIRE"
         ]
       },
       "sortOrderSchema": {
@@ -1553,6 +1942,62 @@
         "type": "string",
         "minLength": 8
       },
+      "submitScorecardSchema": {
+        "type": "object",
+        "properties": {
+          "recommendation": {
+            "type": "string",
+            "enum": [
+              "STRONG_HIRE",
+              "HIRE",
+              "NEUTRAL",
+              "NO_HIRE",
+              "STRONG_NO_HIRE"
+            ]
+          },
+          "overallNotes": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 4000
+          },
+          "criteriaScores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 100
+                },
+                "criterion": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 100
+                },
+                "score": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5
+                },
+                "comment": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "category",
+                "criterion",
+                "score"
+              ]
+            }
+          }
+        },
+        "required": [
+          "recommendation",
+          "overallNotes"
+        ]
+      },
       "updateAIMatchingModelSchema": {
         "type": "object",
         "properties": {
@@ -1596,6 +2041,8 @@
             "enum": [
               "UNDER_REVIEW",
               "SHORTLISTED",
+              "INTERVIEW_SCHEDULED",
+              "INTERVIEWED",
               "REJECTED",
               "ACCEPTED"
             ]
@@ -1742,6 +2189,30 @@
           "errorMessage": {
             "type": "string",
             "maxLength": 2000
+          }
+        }
+      },
+      "updateOrganizationSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "domain": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 120
+          },
+          "isActive": {
+            "type": "boolean"
           }
         }
       },
@@ -2205,12 +2676,43 @@
         }
       }
     },
-    "/api/v1/matching/status/{queueJobId}": {
+    "/api/v1/matching/queue-status/{queueJobId}": {
       "get": {
         "tags": [
           "AI Matching"
         ],
         "summary": "Get status of background matching job",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "queueJobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status and progress"
+          },
+          "404": {
+            "description": "Job not found"
+          }
+        }
+      }
+    },
+    "/api/v1/matching/status/{queueJobId}": {
+      "get": {
+        "tags": [
+          "AI Matching"
+        ],
+        "summary": "Get status of background matching job (Alias)",
         "security": [
           {
             "bearerAuth": []
@@ -2416,6 +2918,8 @@
                     "enum": [
                       "UNDER_REVIEW",
                       "SHORTLISTED",
+                      "INTERVIEW_SCHEDULED",
+                      "INTERVIEWED",
                       "REJECTED",
                       "ACCEPTED"
                     ]
@@ -2484,6 +2988,255 @@
           },
           "403": {
             "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/interviews": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Schedule a candidate interview and send Brevo invitations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "applicationId": {
+                    "type": "string",
+                    "format": "cuid"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "SCREENING",
+                      "TECHNICAL",
+                      "PEDAGOGICAL_DEMO",
+                      "BEHAVIORAL",
+                      "FINAL_HR"
+                    ],
+                    "default": "TECHNICAL"
+                  },
+                  "startTime": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endTime": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "default": "UTC"
+                  },
+                  "meetingProvider": {
+                    "type": "string",
+                    "enum": [
+                      "ZOOM",
+                      "GOOGLE_MEET",
+                      "MS_TEAMS",
+                      "CUSTOM_LINK",
+                      "IN_PERSON"
+                    ],
+                    "default": "CUSTOM_LINK"
+                  },
+                  "customMeetingUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          ""
+                        ]
+                      }
+                    ]
+                  },
+                  "locationDetails": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "interviewerIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "cuid"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "applicationId",
+                  "title",
+                  "startTime",
+                  "endTime",
+                  "interviewerIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Interview scheduled and Brevo invitation emails dispatched"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "List organization interviews with filters",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated interviews list"
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{id}/scorecards": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Submit evaluator scorecard ratings for an interview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recommendation": {
+                    "type": "string",
+                    "enum": [
+                      "STRONG_HIRE",
+                      "HIRE",
+                      "NEUTRAL",
+                      "NO_HIRE",
+                      "STRONG_NO_HIRE"
+                    ]
+                  },
+                  "overallNotes": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 4000
+                  },
+                  "criteriaScores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "category": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 100
+                        },
+                        "criterion": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 100
+                        },
+                        "score": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 5
+                        },
+                        "comment": {
+                          "type": "string",
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "category",
+                        "criterion",
+                        "score"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "recommendation",
+                  "overallNotes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scorecard submitted successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{id}/calendar.ics": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Download iCal .ics calendar event file",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RFC 5545 iCal file stream"
           }
         }
       }

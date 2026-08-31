@@ -1,14 +1,16 @@
-import type { Prisma } from "../../generated/prisma/client.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { getSemanticProvider } from "../matching/semantic-factory.js";
+import { isOrganizationProfileComplete } from "../organizations/organizations.service.js";
 import {
   getCache,
   setCache,
   PUBLISHED_JOBS_CACHE_KEY,
   invalidateJobCache,
 } from "../../lib/cache.js";
+import { PAGINATION_CONFIG, CACHE_TTL_CONFIG } from "../../config/constants.js";
 import type {
   CreateJobPostInput,
   UpdateJobPostInput,
@@ -22,6 +24,19 @@ export async function createJobPost(
   organizationId: string,
 ) {
   const status: JobStatus = (input.status as JobStatus) || "DRAFT";
+
+  if (status === "PUBLISHED") {
+    const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org) throw new AppError("Organization not found.", 404);
+    const { isComplete, missingFields } = isOrganizationProfileComplete(org);
+    if (!isComplete) {
+      throw new AppError(
+        `Cannot publish job offers until the organization profile is completed. Missing mandatory fields: ${missingFields.join(", ")}. Please configure your profile in Organization Settings.`,
+        400,
+      );
+    }
+  }
+
   const publishedAt = status === "PUBLISHED" ? new Date() : null;
 
   const jobPost = await prisma.jobPost.create({
@@ -66,8 +81,9 @@ async function saveJobPostVector(jobPostId: string, textContent: string): Promis
       const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(textContent);
       if (vector384 && vector384.length === 384) {
         const formattedVec = `[${vector384.join(",")}]`;
-        await prisma.$executeRawUnsafe(
-          `UPDATE job_posts SET embedding = '${formattedVec}'::vector WHERE id = '${jobPostId}'`,
+        // Use parameterized $executeRaw to prevent injection — jobPostId is an external value
+        await prisma.$executeRaw(
+          Prisma.sql`UPDATE job_posts SET embedding = ${formattedVec}::vector WHERE id = ${jobPostId}`,
         );
       }
     }
@@ -81,13 +97,13 @@ export async function getJobPosts(
   requesterRole?: string,
   requesterOrgId?: string,
 ) {
-  const page = Number(query.page) > 0 ? Number(query.page) : 1;
-  const limit = Number(query.limit) > 0 ? Number(query.limit) : 10;
+  const page = Number(query.page) > 0 ? Number(query.page) : PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = Number(query.limit) > 0 ? Number(query.limit) : PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
   const whereClause: Prisma.JobPostWhereInput = {};
 
-  if (requesterRole === "ADMIN") {
+  if (requesterRole === "ORGANIZATION_ADMIN") {
     if (requesterOrgId) {
       whereClause.organizationId = requesterOrgId;
     }
@@ -152,7 +168,7 @@ export async function getJobPosts(
   };
 
   if (isDefaultPublishedList) {
-    await setCache(PUBLISHED_JOBS_CACHE_KEY, result, 3600);
+    await setCache(PUBLISHED_JOBS_CACHE_KEY, result, CACHE_TTL_CONFIG.JOB_CACHE_SECONDS);
   }
 
   return result;
@@ -189,15 +205,15 @@ export async function getJobPostById(
     throw new AppError("Job post not found.", 404);
   }
 
-  if (requesterRole === "ADMIN" && requesterOrgId && jobPost.organizationId && jobPost.organizationId !== requesterOrgId) {
+  if (requesterRole === "ORGANIZATION_ADMIN" && requesterOrgId && jobPost.organizationId && jobPost.organizationId !== requesterOrgId) {
     throw new AppError("Job post not found or access denied.", 404);
   }
 
-  if (requesterRole !== "ADMIN" && jobPost.status !== "PUBLISHED") {
+  if (requesterRole !== "ORGANIZATION_ADMIN" && jobPost.status !== "PUBLISHED") {
     throw new AppError("Job post not found.", 404);
   }
 
-  await setCache(cacheKey, jobPost, 3600);
+  await setCache(cacheKey, jobPost, CACHE_TTL_CONFIG.JOB_CACHE_SECONDS);
   return jobPost;
 }
 
@@ -223,6 +239,19 @@ export async function updateJobPost(
 
   if (input.status !== undefined && input.status !== existingJob.status) {
     const newStatus = input.status as JobStatus;
+
+    if (newStatus === "PUBLISHED" && existingJob.status !== "PUBLISHED") {
+      const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+      if (!org) throw new AppError("Organization not found.", 404);
+      const { isComplete, missingFields } = isOrganizationProfileComplete(org);
+      if (!isComplete) {
+        throw new AppError(
+          `Cannot publish job offers until the organization profile is completed. Missing mandatory fields: ${missingFields.join(", ")}. Please configure your profile in Organization Settings.`,
+          400,
+        );
+      }
+    }
+
     updateData.status = newStatus;
 
     if (newStatus === "PUBLISHED" && !existingJob.publishedAt) {

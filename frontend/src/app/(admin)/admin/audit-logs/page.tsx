@@ -19,7 +19,7 @@ export default function AuditLogsPage() {
   const pagination = data?.meta;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">System Audit Logs</h1>

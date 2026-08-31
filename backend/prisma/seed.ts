@@ -25,22 +25,32 @@ async function main() {
     },
   });
 
-  const passwordHash = await argon2.hash("AdminPassword123!");
-  const candidatePasswordHash = await argon2.hash("CandidatePassword123!");
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@khademni.local").toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "DevAdminSecret_2026!";
+  const candidatePassword = process.env.SEED_CANDIDATE_PASSWORD || "DevCandidateSecret_2026!";
 
-  // Seed Admin User (Nourhene)
+  if (process.env.NODE_ENV === "production" && (!process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_ADMIN_EMAIL)) {
+    throw new Error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD environment variables are strictly required for production seeding.");
+  }
+
+  const passwordHash = await argon2.hash(adminPassword);
+  const candidatePasswordHash = await argon2.hash(candidatePassword);
+
+  // Seed Admin User (Platform Super Admin)
   const admin = await prisma.user.upsert({
-    where: { email: "benothmennourhene9@gmail.com" },
+    where: { email: adminEmail },
     update: {
       role: "ADMIN",
+      isSuperAdmin: true,
       organizationId: org.id,
       isEmailVerified: true,
     },
     create: {
-      email: "benothmennourhene9@gmail.com",
-      fullName: "Nourhene Ben Othmen",
+      email: adminEmail,
+      fullName: "Platform Super Administrator",
       passwordHash,
       role: "ADMIN",
+      isSuperAdmin: true,
       isEmailVerified: true,
       organizationId: org.id,
     },
@@ -48,11 +58,11 @@ async function main() {
 
   // Seed Candidate User
   const candidate = await prisma.user.upsert({
-    where: { email: "candidate@example.com" },
+    where: { email: "candidate@khademni.local" },
     update: {},
     create: {
-      email: "candidate@example.com",
-      fullName: "Jane Teacher",
+      email: "candidate@khademni.local",
+      fullName: "Jane Candidate",
       passwordHash: candidatePasswordHash,
       role: "CANDIDATE",
       isEmailVerified: true,

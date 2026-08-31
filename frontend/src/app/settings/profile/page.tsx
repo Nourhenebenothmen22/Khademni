@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
+import { getAvatarImageUrl } from "@/lib/api/client";
 import { updateMyProfile, changePassword, uploadUserAvatar, deleteUserAvatar } from "@/features/users/api";
+import { AVATAR_UPLOAD_CONFIG, PASSWORD_CONFIG } from "@/config/constants";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { toast } from "sonner";
 import {
@@ -38,8 +40,8 @@ export default function ProfileSettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image file size must be less than 2 MB");
+    if (file.size > AVATAR_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES) {
+      toast.error(`Image file size must be less than ${AVATAR_UPLOAD_CONFIG.MAX_FILE_SIZE_MB} MB`);
       return;
     }
 
@@ -151,7 +153,7 @@ export default function ProfileSettingsPage() {
                 <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                   <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e2e3f6] text-[#282276] overflow-hidden border border-slate-200 shrink-0 font-black text-xl">
                     {user?.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+                      <img src={getAvatarImageUrl(user.avatarUrl)!} alt={user.fullName} className="h-full w-full object-cover" />
                     ) : (
                       user?.fullName?.charAt(0).toUpperCase() || "U"
                     )}
@@ -159,14 +161,14 @@ export default function ProfileSettingsPage() {
 
                   <div className="space-y-1 text-xs">
                     <p className="font-bold text-slate-900">Profile Photo</p>
-                    <p className="text-slate-400">JPEG, PNG, or WebP. Max 2MB.</p>
+                    <p className="text-slate-400">JPEG, PNG, or WebP. Max {AVATAR_UPLOAD_CONFIG.MAX_FILE_SIZE_MB}MB.</p>
                     <div className="flex items-center gap-2 pt-1">
                       <label className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-300 px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs">
                         <Upload className="h-3.5 w-3.5 text-[#282276]" />
                         <span>{avatarLoading ? "Uploading..." : "Upload Photo"}</span>
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept={AVATAR_UPLOAD_CONFIG.INPUT_ACCEPT}
                           onChange={handleAvatarFileChange}
                           disabled={avatarLoading}
                           className="hidden"
@@ -264,17 +266,17 @@ export default function ProfileSettingsPage() {
                 <PasswordInput
                   label="NEW PASSWORD"
                   required
-                  minLength={8}
+                  minLength={PASSWORD_CONFIG.MIN_LENGTH}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Minimum 8 characters"
+                  placeholder={`Minimum ${PASSWORD_CONFIG.MIN_LENGTH} characters`}
                 />
               </div>
 
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={passwordLoading || !currentPassword || newPassword.length < 8}
+                  disabled={passwordLoading || !currentPassword || newPassword.length < PASSWORD_CONFIG.MIN_LENGTH}
                   className="rounded-xl bg-[#282276] hover:bg-[#1f1a5f] text-white text-xs sm:text-sm font-extrabold px-6 py-2.5 shadow-sm transition-all disabled:opacity-40"
                 >
                   {passwordLoading ? "Updating..." : "Update Security Password"}

@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+.git
+backend/node_modules
+backend/dist
+backend/uploads
+backend/reports
+frontend/node_modules
+frontend/.next
+*.log

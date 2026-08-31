@@ -10,12 +10,13 @@ import {
   interviewQuerySchema,
   interviewParamsSchema,
 } from "../../common/validators/interview.validators.js";
+import { webhookRateLimiter } from "../../common/middlewares/rate-limit.middleware.js";
 import * as interviewsController from "./interviews.controller.js";
 
 const router = Router();
 
-// Public webhook route for Brevo deliverability events
-router.post("/webhooks/brevo", interviewsController.brevoWebhookController);
+// Public webhook route for Brevo deliverability events (rate limited & HMAC signature protected)
+router.post("/webhooks/brevo", webhookRateLimiter, interviewsController.brevoWebhookController);
 
 // Authenticated routes
 router.use(authenticate);
@@ -27,18 +28,18 @@ router.get(
   interviewsController.getMyInterviewsController,
 );
 
-router.use(requireTenantAccess);
-
 router.post(
   "/",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateBody(scheduleInterviewSchema),
   interviewsController.scheduleInterviewController,
 );
 
 router.get(
   "/",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateQuery(interviewQuerySchema),
   interviewsController.getInterviewsController,
 );
@@ -51,7 +52,8 @@ router.get(
 
 router.patch(
   "/:id/reschedule",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateParams(interviewParamsSchema),
   validateBody(rescheduleInterviewSchema),
   interviewsController.rescheduleInterviewController,
@@ -59,7 +61,8 @@ router.patch(
 
 router.post(
   "/:id/cancel",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateParams(interviewParamsSchema),
   validateBody(cancelInterviewSchema),
   interviewsController.cancelInterviewController,
@@ -67,7 +70,8 @@ router.post(
 
 router.post(
   "/:id/scorecards",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
+  requireTenantAccess,
   validateParams(interviewParamsSchema),
   validateBody(submitScorecardSchema),
   interviewsController.submitScorecardController,

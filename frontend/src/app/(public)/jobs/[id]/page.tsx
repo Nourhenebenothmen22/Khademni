@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchJobById } from "@/features/jobs/api";
 import { applyToJob } from "@/features/applications/api";
+import { CV_UPLOAD_CONFIG } from "@/config/constants";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Header } from "@/components/layout/header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -48,16 +49,19 @@ export default function JobDetailPage({ params }: { params?: Promise<{ id: strin
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      setSelectedFile(acceptedFiles[0]);
+      const file = acceptedFiles[0];
+      if (file.size > CV_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES) {
+        toast.error(`File size exceeds the maximum limit of ${CV_UPLOAD_CONFIG.MAX_FILE_SIZE_MB}MB.`);
+        return;
+      }
+      setSelectedFile(file);
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-    },
+    accept: CV_UPLOAD_CONFIG.DROPZONE_ACCEPT,
+    maxSize: CV_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES,
     maxFiles: 1,
   });
 
@@ -180,7 +184,7 @@ export default function JobDetailPage({ params }: { params?: Promise<{ id: strin
             </div>
 
             {/* Admin Banner if Admin is viewing */}
-            {isAuthenticated && user?.role === "ADMIN" && (
+            {isAuthenticated && user?.role === "ORGANIZATION_ADMIN" && (
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">

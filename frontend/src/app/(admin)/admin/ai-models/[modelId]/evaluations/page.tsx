@@ -54,7 +54,7 @@ export default function ModelEvaluationsListPage({
   const evaluations = evalData?.data || [];
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6 max-w-5xl">
         <Link
           href="/admin/ai-models"

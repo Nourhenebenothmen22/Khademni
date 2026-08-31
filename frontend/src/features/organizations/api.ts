@@ -15,8 +15,32 @@ export interface CreateOrganizationPayload {
   isActive?: boolean;
 }
 
+export interface UpdateOrganizationPayload {
+  name?: string;
+  slug?: string;
+  domain?: string | null;
+  website?: string | null;
+  description?: string | null;
+  industry?: string | null;
+  location?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  country?: string | null;
+  city?: string | null;
+  socialLinks?: Record<string, string> | null;
+  isActive?: boolean;
+}
+
 export async function fetchMyOrganization(): Promise<ApiResponse<Organization>> {
   return apiRequest<Organization>("/organizations/me");
+}
+
+export async function updateMyOrganization(payload: UpdateOrganizationPayload): Promise<ApiResponse<Organization>> {
+  return apiRequest<Organization>("/organizations/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchOrganizations(filters: OrganizationQueryFilters = {}): Promise<ApiResponse<Organization[]>> {
@@ -41,7 +65,7 @@ export async function createOrganization(payload: CreateOrganizationPayload): Pr
   });
 }
 
-export async function updateOrganization(id: string, payload: Partial<CreateOrganizationPayload>): Promise<ApiResponse<Organization>> {
+export async function updateOrganization(id: string, payload: UpdateOrganizationPayload): Promise<ApiResponse<Organization>> {
   return apiRequest<Organization>(`/organizations/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),

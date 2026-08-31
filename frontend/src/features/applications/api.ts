@@ -1,4 +1,4 @@
-import { apiRequest, API_BASE_URL } from "@/lib/api/client";
+import { apiRequest, API_BASE_URL, getAccessToken, getActiveOrganizationId } from "@/lib/api/client";
 import { ApiResponse, Application, ApplicationStatus } from "@/types/backend";
 
 export interface ApplicationQueryFilters {
@@ -73,4 +73,41 @@ export async function deleteApplication(id: string): Promise<ApiResponse<{ messa
 
 export function getDocumentDownloadUrl(applicationId: string, docId: string): string {
   return `${API_BASE_URL}/applications/${applicationId}/documents/${docId}/download`;
+}
+
+/**
+ * Authenticated document download.
+ * The in-memory Bearer token cannot be sent via a plain <a href> navigation,
+ * so this function fetches the file with the Authorization header and
+ * triggers a browser save-dialog via a programmatic anchor click.
+ */
+export async function downloadDocumentBlob(
+  applicationId: string,
+  docId: string,
+  filename: string,
+): Promise<void> {
+  const url = `${API_BASE_URL}/applications/${applicationId}/documents/${docId}/download`;
+  const token = getAccessToken();
+  const orgId = getActiveOrganizationId();
+
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (orgId) headers["X-Organization-Id"] = orgId;
+
+  const res = await fetch(url, { headers, credentials: "include" });
+
+  if (!res.ok) {
+    throw new Error(`CV download failed: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(objectUrl);
 }

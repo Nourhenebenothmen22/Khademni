@@ -9,7 +9,7 @@ import { fetchNotifications } from "@/features/notifications/api";
 import { JobPost } from "@/types/backend";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { Briefcase, Calendar, MessageSquare, RefreshCw, ChevronRight, Globe } from "lucide-react";
+import { Briefcase, Calendar, MessageSquare } from "lucide-react";
 
 export default function CandidateDashboardPage() {
   const { user } = useAuth();
@@ -50,8 +50,6 @@ export default function CandidateDashboardPage() {
   if (user?.isEmailVerified) profileStrength += 25;
   if (user?.avatarUrl) profileStrength += 25;
   if (applications.length > 0) profileStrength += 25;
-
-  const profileDashOffset = 100 - profileStrength;
 
   return (
     <DashboardShell requiredRole="CANDIDATE">
@@ -298,7 +296,7 @@ export default function CandidateDashboardPage() {
                           View
                         </Link>
                         <Link
-                          href={`/jobs/${job.id}#apply-section`}
+                          href={`/jobs/${job.id}`}
                           className="px-2.5 py-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors"
                         >
                           Apply

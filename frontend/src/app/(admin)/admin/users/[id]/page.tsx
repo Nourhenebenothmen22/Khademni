@@ -32,7 +32,7 @@ export default function UserDetailPage({ params }: { params?: Promise<{ id: stri
   const user = data?.data;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6 max-w-2xl">
         <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600">
           <ArrowLeft className="h-4 w-4" /> Back to Users Directory

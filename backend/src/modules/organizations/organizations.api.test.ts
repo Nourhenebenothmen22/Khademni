@@ -43,7 +43,7 @@ describe("Organizations API Integration Tests", () => {
         email: `admin1_${Date.now()}@acme.edu`,
         passwordHash: "hash",
         fullName: "Admin One",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: org1Id,
       },
     });
@@ -54,7 +54,7 @@ describe("Organizations API Integration Tests", () => {
         email: `admin2_${Date.now()}@beacon.edu`,
         passwordHash: "hash",
         fullName: "Admin Two",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: org2Id,
       },
     });
@@ -62,13 +62,13 @@ describe("Organizations API Integration Tests", () => {
 
     admin1Token = await signAccessToken({
       userId: admin1UserId,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: org1Id,
     });
 
     admin2Token = await signAccessToken({
       userId: admin2UserId,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: org2Id,
     });
   });

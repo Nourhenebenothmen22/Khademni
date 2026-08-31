@@ -1,7 +1,7 @@
-"use client";
-
-import { Video, Calendar as CalendarIcon, Clock, User, Download, FileText } from "lucide-react";
-import { getIcsDownloadUrl } from "../api/interviews-api";
+import { useState } from "react";
+import { Video, Calendar as CalendarIcon, Clock, User, Download, FileText, MapPin, Loader2 } from "lucide-react";
+import { getIcsDownloadUrl, downloadIcsBlob } from "../api/interviews-api";
+import { toast } from "sonner";
 import type { Interview } from "@/types/backend";
 
 interface InterviewListProps {
@@ -15,8 +15,23 @@ interface InterviewListProps {
 export function InterviewList({
   interviews,
   isAdmin = false,
+  onReschedule,
+  onCancel,
   onOpenScorecard,
 }: InterviewListProps) {
+  const [downloadingIcsId, setDownloadingIcsId] = useState<string | null>(null);
+
+  const handleDownloadIcs = async (interview: Interview) => {
+    setDownloadingIcsId(interview.id);
+    try {
+      await downloadIcsBlob(interview.id, `interview-${interview.id}.ics`);
+      toast.success("Calendar invite (.ics) downloaded!");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Failed to download calendar invite");
+    } finally {
+      setDownloadingIcsId(null);
+    }
+  };
   if (!interviews || interviews.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">
@@ -83,6 +98,12 @@ export function InterviewList({
                     Candidate: {item.candidate.fullName}
                   </span>
                 )}
+                {item.locationDetails && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                    {item.locationDetails}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -100,14 +121,38 @@ export function InterviewList({
                 </a>
               )}
 
-              <a
-                href={getIcsDownloadUrl(item.id)}
-                download
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+              <button
+                type="button"
+                onClick={() => handleDownloadIcs(item)}
+                disabled={downloadingIcsId === item.id}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors disabled:opacity-50"
               >
-                <Download className="w-3.5 h-3.5" />
+                {downloadingIcsId === item.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
                 .ics Invite
-              </a>
+              </button>
+
+              {isAdmin && onReschedule && (item.status === "SCHEDULED" || item.status === "RESCHEDULED") && (
+                <button
+                  onClick={() => onReschedule(item)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
+                >
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  Reschedule
+                </button>
+              )}
+
+              {isAdmin && onCancel && (item.status === "SCHEDULED" || item.status === "RESCHEDULED") && (
+                <button
+                  onClick={() => onCancel(item)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
 
               {isAdmin && onOpenScorecard && item.status !== "CANCELLED" && (
                 <button

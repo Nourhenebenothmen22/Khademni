@@ -4,6 +4,7 @@ import React, { useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { resetPassword } from "@/features/auth/api";
+import { PASSWORD_CONFIG } from "@/config/constants";
 import { Header } from "@/components/layout/header";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/input";
@@ -69,10 +70,10 @@ export default function ResetPasswordPage({ searchParams }: { searchParams: Prom
                 <PasswordInput
                   label="New Password"
                   required
-                  minLength={8}
+                  minLength={PASSWORD_CONFIG.MIN_LENGTH}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 8 characters"
+                  placeholder={`Minimum ${PASSWORD_CONFIG.MIN_LENGTH} characters`}
                   icon={Lock}
                 />
 

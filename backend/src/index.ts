@@ -2,6 +2,7 @@ import { app } from "./app.js";
 import { logger } from "./lib/logger.js";
 import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
+import { SECURITY_CONFIG } from "./config/constants.js";
 
 const PORT = env.PORT;
 
@@ -25,11 +26,11 @@ async function gracefulShutdown(signal: string): Promise<void> {
     }
   });
 
-  // Force exit after 10 seconds if shutdown hangs
+  // Force exit after shutdown timeout if shutdown hangs
   setTimeout(() => {
     logger.error("Forcefully terminating due to shutdown timeout");
     process.exit(1);
-  }, 10000).unref();
+  }, SECURITY_CONFIG.SHUTDOWN_TIMEOUT_MS).unref();
 }
 
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

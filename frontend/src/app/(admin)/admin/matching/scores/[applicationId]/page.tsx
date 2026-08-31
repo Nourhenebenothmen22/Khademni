@@ -26,7 +26,7 @@ export default function ApplicationScorePage({
   const run = scoreData?.matchingRun;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6 max-w-4xl">
         <Link
           href="/admin/applications"

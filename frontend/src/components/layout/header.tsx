@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getAvatarImageUrl } from "@/lib/api/client";
 import { fetchUnreadNotificationCount } from "@/features/notifications/api";
-import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles, Menu, X, LayoutDashboard, FileText, Briefcase, Cpu, Users, ShieldCheck, ShieldAlert, Settings } from "lucide-react";
+import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles, Menu, X, LayoutDashboard, FileText, Briefcase, Cpu, Users, ShieldCheck, ShieldAlert, Settings, Calendar } from "lucide-react";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -14,25 +14,27 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
-  const isAdmin = user?.role === "ADMIN";
+  const isOrgAdmin = user?.role === "ORGANIZATION_ADMIN";
 
   const candidateNav = [
     { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard },
+    { name: "Explore Jobs", href: "/jobs", icon: Briefcase },
     { name: "My Applications", href: "/candidate/applications", icon: FileText },
+    { name: "My Interviews", href: "/candidate/interviews", icon: Calendar },
   ];
 
   const adminNav = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Job Openings", href: "/admin/jobs", icon: Briefcase },
     { name: "Applications", href: "/admin/applications", icon: FileText },
-    { name: "AI Matching Run", href: "/admin/matching", icon: Cpu },
-    { name: "AI Benchmark Models", href: "/admin/ai-models", icon: ShieldCheck },
-    { name: "User Directory", href: "/admin/users", icon: Users },
-    { name: "Organizations", href: "/admin/organizations", icon: Building2 },
+    { name: "Interviews", href: "/admin/interviews", icon: Calendar },
+    { name: "AI Matching Engine", href: "/admin/matching", icon: Cpu },
+    { name: "Organization Profile", href: "/admin/organizations", icon: Building2 },
+    { name: "Team Members", href: "/admin/users", icon: Users },
     { name: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
   ];
 
-  const navItems = isAdmin ? adminNav : candidateNav;
+  const navItems = isOrgAdmin ? adminNav : candidateNav;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -133,7 +135,7 @@ export function Header() {
 
                     <div className="py-1">
                       <Link
-                        href={user?.role === "ADMIN" ? "/admin/dashboard" : "/candidate/dashboard"}
+                        href={user?.role === "ORGANIZATION_ADMIN" ? "/admin/dashboard" : "/candidate/dashboard"}
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-[#e2e3f6] hover:text-[#282276] rounded-xl transition-colors"
                       >
@@ -191,7 +193,7 @@ export function Header() {
         <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top duration-200">
           <div className="space-y-1">
             <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-              {isAdmin ? "Admin Navigation" : "Candidate Portal"}
+              {isOrgAdmin ? "Organization Workspace" : "Candidate Portal"}
             </p>
             {navItems.map((item) => {
               const Icon = item.icon;

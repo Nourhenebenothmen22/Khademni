@@ -24,11 +24,14 @@ if (env.REDIS_URL && redisClient) {
   logger.info("Local in-memory rate limiting active (REDIS_URL unconfigured).");
 }
 
+const isTestEnv = env.NODE_ENV === "test" || process.env.VITEST !== undefined;
+
 export const globalRateLimiter = rateLimit({
   windowMs,
   limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("global"),
   message: {
     success: false,
@@ -41,6 +44,7 @@ export const authRateLimiter = rateLimit({
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("auth"),
   message: {
     success: false,
@@ -53,6 +57,7 @@ export const authLoginRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("auth_login"),
   message: {
     success: false,
@@ -65,6 +70,7 @@ export const authRegisterRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("auth_register"),
   message: {
     success: false,
@@ -78,6 +84,7 @@ export const authRefreshRateLimiter = rateLimit({
   limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("auth_refresh"),
   message: {
     success: false,
@@ -90,6 +97,7 @@ export const authMfaRateLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("auth_mfa"),
   message: {
     success: false,
@@ -103,10 +111,24 @@ export const uploadRateLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => isTestEnv,
   store: getStore("upload"),
   message: {
     success: false,
     message: "Too many upload attempts. Please try again later.",
+  },
+});
+
+export const webhookRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTestEnv,
+  store: getStore("webhook"),
+  message: {
+    success: false,
+    message: "Too many webhook requests. Please try again later.",
   },
 });
 

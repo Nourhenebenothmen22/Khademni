@@ -35,11 +35,11 @@ export default function UserDirectoryPage() {
   const pagination = data?.meta;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">User Account Directory</h1>
-          <p className="mt-1 text-sm text-slate-600">Inspect registered candidates and administrative accounts.</p>
+          <p className="mt-1 text-sm text-slate-600">Inspect registered candidates and organization team accounts.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -56,12 +56,12 @@ export default function UserDirectoryPage() {
 
           <select
             value={roleFilter || ""}
-            onChange={(e) => setRoleFilter(e.target.value ? (e.target.value as UserRole) : undefined)}
+            onChange={(e) => setRoleFilter((e.target.value as UserRole) || undefined)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
           >
             <option value="">All Roles</option>
             <option value="CANDIDATE">CANDIDATE</option>
-            <option value="ADMIN">ADMIN</option>
+            <option value="ORGANIZATION_ADMIN">ORGANIZATION_ADMIN</option>
           </select>
         </div>
 

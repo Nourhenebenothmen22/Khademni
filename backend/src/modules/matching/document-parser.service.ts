@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import * as pdfParseModule from "pdf-parse";
+import { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { getAbsolutePath, fileExists } from "../../lib/file-storage.js";
@@ -34,7 +35,14 @@ function extractGenericMetadata(text: string): GenericDocumentMetadata {
 export async function parseDocument(documentId: string) {
   const doc = await prisma.applicationDocument.findUnique({
     where: { id: documentId },
-    include: { parseResult: true },
+    include: {
+      parseResult: true,
+      application: {
+        include: {
+          jobPost: { select: { id: true, organizationId: true } },
+        },
+      },
+    },
   });
 
   if (!doc) {
@@ -94,17 +102,48 @@ export async function parseDocument(documentId: string) {
     if (provider && "generateVector" in provider && typeof provider.generateVector === "function") {
       const vector384: number[] = await (provider as { generateVector: (text: string) => Promise<number[]> }).generateVector(extractedText);
       if (vector384 && vector384.length === 384) {
+        // Use parameterized $executeRaw to prevent SQL injection — no string concatenation
         const formattedVec = `[${vector384.join(",")}]`;
-        const escapedContent = extractedText.replace(/'/g, "''").substring(0, 8000);
-        
-        await prisma.$executeRawUnsafe(
-          `UPDATE document_parse_results SET embedding = '${formattedVec}'::vector WHERE id = '${parseResult.id}'`,
+
+        // Update embedding on document_parse_results using safe parameterized query
+        await prisma.$executeRaw(
+          Prisma.sql`UPDATE document_parse_results SET embedding = ${formattedVec}::vector WHERE id = ${parseResult.id}`,
         );
 
         const hybridId = `chi_${parseResult.id}`;
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO candidate_hybrid_indexes (id, application_id, content, dense_embedding, search_vector, created_at, updated_at) VALUES ('${hybridId}', '${doc.applicationId}', '${escapedContent}', '${formattedVec}'::vector, to_tsvector('simple', '${escapedContent}'), NOW(), NOW()) ON CONFLICT (application_id) DO UPDATE SET content = EXCLUDED.content, dense_embedding = EXCLUDED.dense_embedding, search_vector = EXCLUDED.search_vector, updated_at = NOW()`,
-        );
+        const truncatedContent = extractedText.substring(0, 8000);
+        const organizationId = doc.application?.jobPost?.organizationId ?? null;
+        const jobPostId = doc.application?.jobPost?.id ?? null;
+
+        if (organizationId && jobPostId) {
+          // Insert into candidate_hybrid_indexes with tenant partition columns
+          await prisma.$executeRaw(
+            Prisma.sql`
+              INSERT INTO candidate_hybrid_indexes
+                (id, application_id, organization_id, job_post_id, content, dense_embedding, search_vector, created_at, updated_at)
+              VALUES (
+                ${hybridId},
+                ${doc.applicationId},
+                ${organizationId},
+                ${jobPostId},
+                ${truncatedContent},
+                ${formattedVec}::vector,
+                to_tsvector('simple', ${truncatedContent}),
+                NOW(),
+                NOW()
+              )
+              ON CONFLICT (application_id) DO UPDATE SET
+                content = EXCLUDED.content,
+                dense_embedding = EXCLUDED.dense_embedding,
+                search_vector = EXCLUDED.search_vector,
+                organization_id = EXCLUDED.organization_id,
+                job_post_id = EXCLUDED.job_post_id,
+                updated_at = NOW()
+            `,
+          );
+        } else {
+          logger.warn({ documentId: doc.id }, "Skipping hybrid index: application missing organizationId or jobPostId.");
+        }
       }
     }
   } catch (err: unknown) {

@@ -1,18 +1,63 @@
-export type UserRole = "CANDIDATE" | "ADMIN";
-export type JobStatus = "DRAFT" | "PUBLISHED" | "CLOSED" | "ARCHIVED";
-export type KeywordType = "REQUIRED" | "OPTIONAL" | "BONUS";
-export type RuleType = "EXPERIENCE" | "DEGREE" | "CERTIFICATION" | "KEYWORD" | "CUSTOM";
-export type ApplicationStatus = "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "INTERVIEW_SCHEDULED" | "INTERVIEWED" | "REJECTED" | "ACCEPTED" | "WITHDRAWN";
-export type DocumentType = "CV" | "MOTIVATION_LETTER";
-export type DocumentStatus = "UPLOADED" | "SCANNED" | "VALIDATED" | "REJECTED";
-export type RunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
-export type ScoreRecommendation = "HIGHLY_RECOMMENDED" | "RECOMMENDED" | "AVERAGE" | "NOT_RECOMMENDED";
-export type EvaluationMetricType = "ACCURACY" | "PRECISION" | "RECALL" | "F1_SCORE" | "PRECISION_AT_1" | "PRECISION_AT_5" | "NDCG_AT_5" | "MAP" | "MRR";
+export const USER_ROLES = ["CANDIDATE", "ORGANIZATION_ADMIN"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
 
-export type InterviewStatus = "SCHEDULED" | "RESCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
-export type InterviewType = "SCREENING" | "TECHNICAL" | "PEDAGOGICAL_DEMO" | "BEHAVIORAL" | "FINAL_HR";
-export type MeetingProvider = "ZOOM" | "GOOGLE_MEET" | "MS_TEAMS" | "CUSTOM_LINK" | "IN_PERSON";
-export type ScorecardRecommendation = "STRONG_HIRE" | "HIRE" | "NEUTRAL" | "NO_HIRE" | "STRONG_NO_HIRE";
+export const JOB_STATUSES = ["DRAFT", "PUBLISHED", "CLOSED", "ARCHIVED"] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+export const KEYWORD_TYPES = ["REQUIRED", "OPTIONAL", "BONUS"] as const;
+export type KeywordType = (typeof KEYWORD_TYPES)[number];
+
+export const RULE_TYPES = ["EXPERIENCE", "DEGREE", "CERTIFICATION", "KEYWORD", "CUSTOM"] as const;
+export type RuleType = (typeof RULE_TYPES)[number];
+
+export const APPLICATION_STATUSES = [
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "SHORTLISTED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEWED",
+  "REJECTED",
+  "ACCEPTED",
+  "WITHDRAWN",
+] as const;
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
+
+export const DOCUMENT_TYPES = ["CV", "MOTIVATION_LETTER"] as const;
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+
+export const DOCUMENT_STATUSES = ["UPLOADED", "SCANNED", "VALIDATED", "REJECTED"] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
+
+export const RUN_STATUSES = ["PENDING", "RUNNING", "COMPLETED", "FAILED"] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+export const SCORE_RECOMMENDATIONS = ["HIGHLY_RECOMMENDED", "RECOMMENDED", "AVERAGE", "NOT_RECOMMENDED"] as const;
+export type ScoreRecommendation = (typeof SCORE_RECOMMENDATIONS)[number];
+
+export const EVALUATION_METRIC_TYPES = [
+  "ACCURACY",
+  "PRECISION",
+  "RECALL",
+  "F1_SCORE",
+  "PRECISION_AT_1",
+  "PRECISION_AT_5",
+  "NDCG_AT_5",
+  "MAP",
+  "MRR",
+] as const;
+export type EvaluationMetricType = (typeof EVALUATION_METRIC_TYPES)[number];
+
+export const INTERVIEW_STATUSES = ["SCHEDULED", "RESCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"] as const;
+export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number];
+
+export const INTERVIEW_TYPES = ["SCREENING", "TECHNICAL", "PEDAGOGICAL_DEMO", "BEHAVIORAL", "FINAL_HR"] as const;
+export type InterviewType = (typeof INTERVIEW_TYPES)[number];
+
+export const MEETING_PROVIDERS = ["ZOOM", "GOOGLE_MEET", "MS_TEAMS", "CUSTOM_LINK", "IN_PERSON"] as const;
+export type MeetingProvider = (typeof MEETING_PROVIDERS)[number];
+
+export const SCORECARD_RECOMMENDATIONS = ["STRONG_HIRE", "HIRE", "NEUTRAL", "NO_HIRE", "STRONG_NO_HIRE"] as const;
+export type ScorecardRecommendation = (typeof SCORECARD_RECOMMENDATIONS)[number];
 
 export interface PaginationMeta {
   page: number;
@@ -49,6 +94,16 @@ export interface Organization {
   slug: string;
   domain: string | null;
   logoUrl?: string | null;
+  website?: string | null;
+  description?: string | null;
+  industry?: string | null;
+  location?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  country?: string | null;
+  city?: string | null;
+  socialLinks?: Record<string, string> | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

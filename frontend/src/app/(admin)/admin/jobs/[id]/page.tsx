@@ -37,7 +37,7 @@ export default function AdminJobDetailPage({
   const job = data?.data;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6 max-w-5xl">
         <Link
           href="/admin/jobs"

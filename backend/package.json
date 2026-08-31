@@ -27,6 +27,7 @@
     "test": "vitest run && tsx scripts/integration-test.ts",
     "test:unit": "vitest run",
     "test:integration": "tsx scripts/integration-test.ts",
+    "test:config": "tsx scripts/verify-config-consistency.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",

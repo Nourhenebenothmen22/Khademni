@@ -7,7 +7,7 @@ import { scheduleInterviewApi } from "../api/interviews-api";
 import type { InterviewType, MeetingProvider } from "@/types/backend";
 
 interface ScheduleInterviewModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   onSuccess: () => void;
   applicationId: string;
@@ -17,7 +17,7 @@ interface ScheduleInterviewModalProps {
 }
 
 export function ScheduleInterviewModal({
-  isOpen,
+  isOpen = true,
   onClose,
   onSuccess,
   applicationId,
@@ -35,7 +35,9 @@ export function ScheduleInterviewModal({
   const [provider, setProvider] = useState<MeetingProvider>("ZOOM");
   const [customMeetingUrl, setCustomMeetingUrl] = useState("");
   const [locationDetails, setLocationDetails] = useState("");
-  const [selectedInterviewerIds, setSelectedInterviewerIds] = useState<string[]>([]);
+  const [selectedInterviewerIds, setSelectedInterviewerIds] = useState<string[]>(
+    availableInterviewers.length > 0 ? [availableInterviewers[0].id] : []
+  );
   const [description, setDescription] = useState("");
 
   if (!isOpen) return null;
@@ -54,8 +56,12 @@ export function ScheduleInterviewModal({
       return;
     }
 
-    if (selectedInterviewerIds.length === 0 && availableInterviewers.length > 0) {
-      toast.error("Please assign at least one interviewer");
+    const assignedInterviewers = selectedInterviewerIds.length > 0 
+      ? selectedInterviewerIds 
+      : availableInterviewers.map(i => i.id).slice(0, 1);
+
+    if (assignedInterviewers.length === 0) {
+      toast.error("Please assign at least one interviewer (no team members available)");
       return;
     }
 
@@ -75,7 +81,7 @@ export function ScheduleInterviewModal({
         meetingProvider: provider,
         customMeetingUrl: customMeetingUrl || undefined,
         locationDetails: locationDetails || undefined,
-        interviewerIds: selectedInterviewerIds.length > 0 ? selectedInterviewerIds : [availableInterviewers[0]?.id].filter(Boolean),
+        interviewerIds: assignedInterviewers,
       });
 
       if (res.success) {

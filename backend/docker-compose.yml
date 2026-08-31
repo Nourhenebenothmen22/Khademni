@@ -1,10 +1,9 @@
+# Standalone Backend Docker Compose
 services:
   postgres:
     image: postgres:16-alpine
     container_name: recruitment_postgres
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-recruitment_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -14,9 +13,40 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - recruitment_net
+      - backend_net
+    security_opt:
+      - "no-new-privileges:true"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-recruitment_user} -d ${POSTGRES_DB:-recruitment_db}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: recruitment_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend_net
+    security_opt:
+      - "no-new-privileges:true"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,21 +60,45 @@ services:
     env_file:
       - .env
     ports:
-      - '${PORT:-3000}:${PORT:-3000}'
+      - '${PORT:-3000}:3000'
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-loopback}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:3000,http://localhost:3001}
       DATABASE_URL: ${DATABASE_URL}
+      DATABASE_ENCRYPTION_KEY: ${DATABASE_ENCRYPTION_KEY}
+      REDIS_URL: ${REDIS_URL:-redis://recruitment_redis:6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET}
+      BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
     volumes:
       - uploads_data:/app/uploads
+    tmpfs:
+      - /tmp
     networks:
-      - recruitment_net
+      - backend_net
+    security_opt:
+      - "no-new-privileges:true"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:${PORT:-3000}/health || exit 1']
@@ -54,9 +108,10 @@ services:
       start_period: 15s
 
 networks:
-  recruitment_net:
+  backend_net:
     driver: bridge
 
 volumes:
   postgres_data:
+  redis_data:
   uploads_data:

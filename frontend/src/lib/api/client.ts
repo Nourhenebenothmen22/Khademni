@@ -1,6 +1,7 @@
 import { ApiResponse } from "@/types/backend";
+import { env } from "@/config/env";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+export const API_BASE_URL = env.NEXT_PUBLIC_API_URL;
 
 let accessToken: string | null = null;
 let csrfToken: string | null = null;
@@ -36,6 +37,12 @@ export function getApiOrigin(): string {
 }
 
 export function getAvatarImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${getApiOrigin()}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+export function getOrgLogoImageUrl(url: string | null): string | null {
   if (!url) return null;
   if (url.startsWith("http")) return url;
   return `${getApiOrigin()}${url.startsWith("/") ? "" : "/"}${url}`;

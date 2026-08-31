@@ -9,7 +9,7 @@ datasource db {
 
 enum UserRole {
   CANDIDATE
-  ADMIN
+  ORGANIZATION_ADMIN
 }
 
 enum JobStatus {
@@ -120,6 +120,16 @@ model Organization {
   slug             String                       @unique
   domain           String?                      @unique
   logoKey          String?
+  website          String?
+  description      String?
+  industry         String?
+  location         String?
+  address          String?
+  phone            String?
+  email            String?
+  country          String?
+  city             String?
+  socialLinks      Json?
   isActive         Boolean                      @default(true)
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt
@@ -128,6 +138,7 @@ model Organization {
   auditLogs        AuditLog[]
   interviews       Interview[]
   providerConfigs  OrganizationProviderConfig[]
+  candidateHybridIndexes CandidateHybridIndex[]
 
   @@map("organizations")
 }
@@ -208,6 +219,7 @@ model JobPost {
   matchingRules  JobMatchingRule[]
   applications   Application[]
   interviews     Interview[]
+  candidateHybridIndexes CandidateHybridIndex[]
 
   @@index([status])
   @@index([createdById])
@@ -562,14 +574,18 @@ model OrganizationProviderConfig {
 }
 
 model CandidateHybridIndex {
-  id            String   @id @default(cuid())
-  applicationId String   @unique @map("application_id")
-  content       String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String       @id @default(cuid())
+  applicationId  String       @unique @map("application_id")
+  organizationId String       @map("organization_id")
+  jobPostId      String       @map("job_post_id")
+  content        String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application    Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobPost        JobPost      @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
 
+  @@index([organizationId, jobPostId])
   @@map("candidate_hybrid_indexes")
 }
-

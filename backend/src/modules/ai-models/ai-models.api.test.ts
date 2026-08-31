@@ -5,10 +5,10 @@ import { prisma } from "../../lib/prisma.js";
 import { signAccessToken } from "../../lib/jwt.js";
 
 describe("AI Benchmark Models API Integration Tests", () => {
-  let superAdminToken: string;
-  let tenantAdminToken: string;
-  let superAdminUserId: string;
-  let tenantAdminUserId: string;
+  let orgAdminToken: string;
+  let candidateToken: string;
+  let orgAdminUserId: string;
+  let candidateUserId: string;
   let orgId: string;
   let createdModelId: string;
   let csrfToken: string;
@@ -30,40 +30,39 @@ describe("AI Benchmark Models API Integration Tests", () => {
     });
     orgId = org.id;
 
-    // Super Admin: organizationId is null or isSuperAdmin flag
-    const superAdmin = await prisma.user.create({
+    // Organization Admin:
+    const orgAdmin = await prisma.user.create({
       data: {
-        email: `superadmin_ai_${Date.now()}@platform.com`,
+        email: `orgadmin_ai_${Date.now()}@school.edu`,
         passwordHash: "hash",
-        fullName: "Platform Super Admin",
-        role: "ADMIN",
-      },
-    });
-    superAdminUserId = superAdmin.id;
-
-    // Tenant Admin: associated with organization
-    const tenantAdmin = await prisma.user.create({
-      data: {
-        email: `tenant_admin_ai_${Date.now()}@school.edu`,
-        passwordHash: "hash",
-        fullName: "Tenant Admin",
-        role: "ADMIN",
+        fullName: "Org Admin",
+        role: "ORGANIZATION_ADMIN",
         organizationId: orgId,
       },
     });
-    tenantAdminUserId = tenantAdmin.id;
+    orgAdminUserId = orgAdmin.id;
 
-    superAdminToken = await signAccessToken({
-      userId: superAdmin.id,
-      role: "ADMIN",
-      isSuperAdmin: true,
+    // Candidate:
+    const candidate = await prisma.user.create({
+      data: {
+        email: `candidate_ai_${Date.now()}@test.com`,
+        passwordHash: "hash",
+        fullName: "Candidate User",
+        role: "CANDIDATE",
+      },
+    });
+    candidateUserId = candidate.id;
+
+    orgAdminToken = await signAccessToken({
+      userId: orgAdmin.id,
+      role: "ORGANIZATION_ADMIN",
+      organizationId: orgId,
     });
 
-    tenantAdminToken = await signAccessToken({
-      userId: tenantAdmin.id,
-      role: "ADMIN",
-      organizationId: orgId,
-      isSuperAdmin: false,
+    candidateToken = await signAccessToken({
+      userId: candidate.id,
+      role: "CANDIDATE",
+      organizationId: null,
     });
   }, 30000);
 
@@ -72,16 +71,16 @@ describe("AI Benchmark Models API Integration Tests", () => {
       await prisma.aIMatchingModelEvaluation.deleteMany({ where: { modelId: createdModelId } }).catch(() => {});
       await prisma.aIMatchingModel.delete({ where: { id: createdModelId } }).catch(() => {});
     }
-    if (superAdminUserId) await prisma.user.delete({ where: { id: superAdminUserId } }).catch(() => {});
-    if (tenantAdminUserId) await prisma.user.delete({ where: { id: tenantAdminUserId } }).catch(() => {});
+    if (orgAdminUserId) await prisma.user.delete({ where: { id: orgAdminUserId } }).catch(() => {});
+    if (candidateUserId) await prisma.user.delete({ where: { id: candidateUserId } }).catch(() => {});
     if (orgId) await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
   }, 30000);
 
-  it("POST /api/v1/ai-models — Super Admin can register a new AI matching model", async () => {
+  it("POST /api/v1/ai-models — Organization Admin can register a new AI matching model", async () => {
     const res = await request(app)
       .post("/api/v1/ai-models")
       .set("Origin", "http://localhost:3001")
-      .set("Authorization", `Bearer ${superAdminToken}`)
+      .set("Authorization", `Bearer ${orgAdminToken}`)
       .set("X-CSRF-Token", csrfToken)
       .set("Cookie", csrfCookie)
       .send({
@@ -104,11 +103,11 @@ describe("AI Benchmark Models API Integration Tests", () => {
     createdModelId = res.body.data.id;
   });
 
-  it("POST /api/v1/ai-models — Tenant Admin is REJECTED with 403 Forbidden", async () => {
+  it("POST /api/v1/ai-models — Candidate is REJECTED with 403 Forbidden", async () => {
     const res = await request(app)
       .post("/api/v1/ai-models")
       .set("Origin", "http://localhost:3001")
-      .set("Authorization", `Bearer ${tenantAdminToken}`)
+      .set("Authorization", `Bearer ${candidateToken}`)
       .set("X-CSRF-Token", csrfToken)
       .set("Cookie", csrfCookie)
       .send({
@@ -120,14 +119,14 @@ describe("AI Benchmark Models API Integration Tests", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toContain("Super Admin clearance is required");
+    expect(res.body.message).toContain("Forbidden");
   });
 
-  it("GET /api/v1/ai-models — lists available matching models", async () => {
+  it("GET /api/v1/ai-models — lists available matching models for Organization Admin", async () => {
     const res = await request(app)
       .get("/api/v1/ai-models")
       .set("Origin", "http://localhost:3001")
-      .set("Authorization", `Bearer ${superAdminToken}`);
+      .set("Authorization", `Bearer ${orgAdminToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

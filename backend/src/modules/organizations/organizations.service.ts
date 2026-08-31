@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { prisma } from "../../lib/prisma.js";
-import type { Prisma } from "../../generated/prisma/client.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { saveFile, getFileStream, deleteFile, fileExists } from "../../lib/file-storage.js";
@@ -10,6 +10,7 @@ import type {
   UpdateOrganizationInput,
   OrganizationQuery,
 } from "../../common/validators/organization.validators.js";
+import { PAGINATION_CONFIG } from "../../config/constants.js";
 
 export function getLogoUrl(orgId: string, logoKey: string | null): string | null {
   return logoKey ? `/api/v1/organizations/${orgId}/logo` : null;
@@ -133,6 +134,16 @@ export async function updateOrganization(
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.slug !== undefined ? { slug: input.slug } : {}),
       ...(input.domain !== undefined ? { domain: input.domain } : {}),
+      ...(input.website !== undefined ? { website: input.website } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.industry !== undefined ? { industry: input.industry } : {}),
+      ...(input.location !== undefined ? { location: input.location } : {}),
+      ...(input.address !== undefined ? { address: input.address } : {}),
+      ...(input.phone !== undefined ? { phone: input.phone } : {}),
+      ...(input.email !== undefined ? { email: input.email } : {}),
+      ...(input.country !== undefined ? { country: input.country } : {}),
+      ...(input.city !== undefined ? { city: input.city } : {}),
+      ...(input.socialLinks !== undefined ? { socialLinks: (input.socialLinks ?? Prisma.JsonNull) as Prisma.InputJsonValue } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     },
   });
@@ -149,6 +160,24 @@ export async function updateOrganization(
   return {
     ...updated,
     logoUrl: getLogoUrl(updated.id, updated.logoKey),
+  };
+}
+
+export function isOrganizationProfileComplete(org: {
+  name?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  location?: string | null;
+  logoKey?: string | null;
+}): { isComplete: boolean; missingFields: string[] } {
+  const missingFields: string[] = [];
+  if (!org.name || org.name.trim().length < 2) missingFields.push("Organization Name");
+  if (!org.slug || org.slug.trim().length < 2) missingFields.push("Organization Slug");
+  if (!org.description || org.description.trim().length < 10) missingFields.push("Description");
+  if (!org.location || org.location.trim().length < 2) missingFields.push("Location");
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
   };
 }
 
@@ -250,12 +279,25 @@ export async function getOrganizationLogoStream(orgId: string) {
   return { stream, mimeType };
 }
 
-export async function getOrganizations(query: OrganizationQuery) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+export async function getOrganizations(
+  query: OrganizationQuery,
+  requesterOrgId?: string,
+) {
+  const page = query.page ?? PAGINATION_CONFIG.DEFAULT_PAGE;
+  const limit = query.limit ?? PAGINATION_CONFIG.DEFAULT_LIMIT;
   const skip = (page - 1) * limit;
 
   const where: Prisma.OrganizationWhereInput = {};
+
+  if (requesterOrgId) {
+    where.id = requesterOrgId;
+  } else {
+    return {
+      items: [],
+      pagination: { page, limit, total: 0, totalPages: 0 },
+    };
+  }
+
   if (query.isActive !== undefined) {
     where.isActive = query.isActive;
   }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireRole, requireSuperAdmin } from "../../common/middlewares/auth.middleware.js";
+import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
 import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
 import { validateBody, validateQuery, validateParams } from "../../common/middlewares/validate.middleware.js";
 import { 
@@ -15,17 +15,17 @@ import * as evaluationsController from "./evaluations.controller.js";
 
 const router = Router();
 
-router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ORGANIZATION_ADMIN"));
 
 router.get("/", validateQuery(aiMatchingModelQuerySchema), aiModelsController.getModelsController);
 
-router.post("/", requireSuperAdmin, validateBody(createAIMatchingModelSchema), aiModelsController.createModelController);
+router.post("/", validateBody(createAIMatchingModelSchema), aiModelsController.createModelController);
 
 router.get("/active", aiModelsController.getActiveModelController);
 
 router.get("/:id", validateParams(aiMatchingModelParamsSchema), aiModelsController.getModelByIdController);
 
-router.patch("/:id", requireSuperAdmin, validateParams(aiMatchingModelParamsSchema), validateBody(updateAIMatchingModelSchema), aiModelsController.updateModelController);
+router.patch("/:id", validateParams(aiMatchingModelParamsSchema), validateBody(updateAIMatchingModelSchema), aiModelsController.updateModelController);
 
 // ─── AI Model Evaluations & Metrics Routes ─────────────────────
 router.get("/:modelId/evaluations", evaluationsController.getEvaluationsController);

@@ -55,7 +55,7 @@ describe("Interviews & Scorecards API Integration Tests", () => {
         email: `admin_iv_${Date.now()}@example.com`,
         passwordHash: "argon2-hash",
         fullName: "Interview Lead Admin",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: orgId,
       },
     });
@@ -96,7 +96,7 @@ describe("Interviews & Scorecards API Integration Tests", () => {
 
     adminToken = await signAccessToken({
       userId: adminUserId,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: orgId,
     });
 
@@ -107,20 +107,25 @@ describe("Interviews & Scorecards API Integration Tests", () => {
   }, 60000);
 
   afterAll(async () => {
-    if (interviewId) {
-      await prisma.scorecardCriteriaScore.deleteMany({
-        where: { scorecard: { interviewId } },
-      }).catch(() => {});
-      await prisma.interviewScorecard.deleteMany({ where: { interviewId } }).catch(() => {});
-      await prisma.interviewerAssignment.deleteMany({ where: { interviewId } }).catch(() => {});
-      await prisma.interview.delete({ where: { id: interviewId } }).catch(() => {});
+    try {
+      if (interviewId) {
+        await prisma.scorecardCriteriaScore.deleteMany({ where: { scorecard: { interviewId } } }).catch(() => {});
+        await prisma.interviewScorecard.deleteMany({ where: { interviewId } }).catch(() => {});
+        await prisma.interviewerAssignment.deleteMany({ where: { interviewId } }).catch(() => {});
+        await prisma.interview.delete({ where: { id: interviewId } }).catch(() => {});
+      }
+      if (applicationId) {
+        await prisma.applicationStatusHistory.deleteMany({ where: { applicationId } }).catch(() => {});
+        await prisma.application.delete({ where: { id: applicationId } }).catch(() => {});
+      }
+      if (jobId) await prisma.jobPost.delete({ where: { id: jobId } }).catch(() => {});
+      if (adminUserId) await prisma.user.delete({ where: { id: adminUserId } }).catch(() => {});
+      if (candidateUserId) await prisma.user.delete({ where: { id: candidateUserId } }).catch(() => {});
+      if (orgId) await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
+    } catch {
+      // Ignored
     }
-    if (applicationId) await prisma.application.delete({ where: { id: applicationId } }).catch(() => {});
-    if (jobId) await prisma.jobPost.delete({ where: { id: jobId } }).catch(() => {});
-    if (adminUserId) await prisma.user.delete({ where: { id: adminUserId } }).catch(() => {});
-    if (candidateUserId) await prisma.user.delete({ where: { id: candidateUserId } }).catch(() => {});
-    if (orgId) await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
-  }, 60000);
+  }, 90000);
 
   it("POST /api/v1/interviews — should schedule an interview with video conferencing link", async () => {
     const startTime = new Date(Date.now() + 86400000).toISOString();

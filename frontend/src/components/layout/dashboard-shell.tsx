@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 interface DashboardShellProps {
   children: React.ReactNode;
-  requiredRole?: "ADMIN" | "CANDIDATE";
+  requiredRole?: "ORGANIZATION_ADMIN" | "CANDIDATE";
 }
 
 export function DashboardShell({ children, requiredRole }: DashboardShellProps) {

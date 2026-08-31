@@ -12,7 +12,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   let dotStyle = "bg-slate-400";
 
   switch (status) {
-    // Application Statuses
+    // Application & Interview Statuses
     case "SUBMITTED":
       colorStyle = "bg-blue-50/80 text-blue-700 border-blue-200/80";
       dotStyle = "bg-blue-500";
@@ -21,16 +21,41 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       colorStyle = "bg-amber-50/80 text-amber-700 border-amber-200/80";
       dotStyle = "bg-amber-500";
       break;
+    case "INTERVIEW_SCHEDULED":
+    case "SCHEDULED":
+      colorStyle = "bg-indigo-50/80 text-indigo-700 border-indigo-200/80";
+      dotStyle = "bg-indigo-500";
+      break;
+    case "RESCHEDULED":
+      colorStyle = "bg-amber-50/80 text-amber-700 border-amber-200/80";
+      dotStyle = "bg-amber-500";
+      break;
+    case "INTERVIEWED":
+      colorStyle = "bg-purple-50/80 text-purple-700 border-purple-200/80";
+      dotStyle = "bg-purple-500";
+      break;
     case "SHORTLISTED":
     case "ACCEPTED":
+    case "COMPLETED":
+    case "STRONG_HIRE":
+    case "HIRE":
     case "HIGHLY_RECOMMENDED":
     case "RECOMMENDED":
       colorStyle = "bg-emerald-50/80 text-emerald-700 border-emerald-200/80";
       dotStyle = "bg-emerald-500";
       break;
+    case "AVERAGE":
+    case "NEUTRAL":
+      colorStyle = "bg-amber-50/80 text-amber-700 border-amber-200/80";
+      dotStyle = "bg-amber-500";
+      break;
     case "REJECTED":
     case "NOT_RECOMMENDED":
     case "FAILED":
+    case "CANCELLED":
+    case "NO_SHOW":
+    case "NO_HIRE":
+    case "STRONG_NO_HIRE":
       colorStyle = "bg-rose-50/80 text-rose-700 border-rose-200/80";
       dotStyle = "bg-rose-500";
       break;
@@ -42,7 +67,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       break;
     // Job & Run Statuses
     case "PUBLISHED":
-    case "COMPLETED":
       colorStyle = "bg-emerald-50/80 text-emerald-700 border-emerald-200/80";
       dotStyle = "bg-emerald-500";
       break;

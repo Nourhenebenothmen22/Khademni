@@ -62,7 +62,7 @@ describe("Users & Admin User Directory API Integration Tests", () => {
         email: `admin_usr_${Date.now()}@example.com`,
         passwordHash,
         fullName: "Directory Admin",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: orgId,
       },
     });
@@ -75,7 +75,7 @@ describe("Users & Admin User Directory API Integration Tests", () => {
 
     adminToken = await signAccessToken({
       userId: admin.id,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: orgId,
     });
   }, 60000);

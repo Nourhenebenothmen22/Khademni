@@ -6,8 +6,8 @@ import * as applicationsService from "./applications.service.js";
 
 function getOrganizationId(req: AuthenticatedRequest): string {
   const orgId = req.user?.organizationId;
-  if (!orgId) {
-    throw new AppError("Organization context is required for this operation", 403);
+  if (!orgId || req.user?.role !== "ORGANIZATION_ADMIN") {
+    throw new AppError("Organization administrator context is required.", 403);
   }
   return orgId;
 }
@@ -47,7 +47,7 @@ export async function downloadDocumentController(
     const { id, docId } = req.params as { id: string; docId: string };
     const userId = req.user!.userId;
     const role = req.user!.role;
-    const organizationId = role === "ADMIN" ? (req.user?.organizationId ?? undefined) : undefined;
+    const organizationId = role === "ORGANIZATION_ADMIN" ? (req.user?.organizationId ?? undefined) : undefined;
 
     const { stream, document } = await applicationsService.getDownloadStream(
       id,

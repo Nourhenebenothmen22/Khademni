@@ -135,6 +135,28 @@ export async function getLogoController(
   }
 }
 
+export async function updateMyOrganizationController(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const orgId = req.user?.organizationId;
+    if (!orgId) {
+      throw new AppError("User is not associated with any organization.", 404);
+    }
+    const updatedById = req.user!.userId;
+    const updated = await organizationsService.updateOrganization(orgId, req.body, updatedById);
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getOrganizationsController(
   req: AuthenticatedRequest,
   res: Response,
@@ -142,7 +164,8 @@ export async function getOrganizationsController(
 ): Promise<void> {
   try {
     const query = req.query as unknown as OrganizationQuery;
-    const result = await organizationsService.getOrganizations(query);
+    const requesterOrgId = req.user?.organizationId ?? undefined;
+    const result = await organizationsService.getOrganizations(query, requesterOrgId);
 
     res.status(200).json({
       success: true,

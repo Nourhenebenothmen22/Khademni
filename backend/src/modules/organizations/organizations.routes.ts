@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireRole } from "../../common/middlewares/auth.middleware.js";
 import { requireTenantAccess } from "../../common/middlewares/tenant.middleware.js";
-import { avatarUpload } from "../../common/middlewares/avatar-upload.middleware.js";
+import { avatarUpload, validateAndSaveAvatarUpload } from "../../common/middlewares/avatar-upload.middleware.js";
 import {
   validateBody,
   validateQuery,
@@ -23,25 +23,36 @@ router.get("/:id/logo", organizationsController.getLogoController);
 // Authenticated organization routes
 router.use(authenticate);
 
-router.get("/me", organizationsController.getMyOrganizationController);
+router.get(
+  "/me",
+  requireRole("ORGANIZATION_ADMIN"),
+  organizationsController.getMyOrganizationController,
+);
+
+router.patch(
+  "/me",
+  requireRole("ORGANIZATION_ADMIN"),
+  validateBody(updateOrganizationSchema),
+  organizationsController.updateMyOrganizationController,
+);
 
 router.post(
   "/",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   validateBody(createOrganizationSchema),
   organizationsController.createOrganizationController,
 );
 
 router.get(
   "/",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   validateQuery(organizationQuerySchema),
   organizationsController.getOrganizationsController,
 );
 
 router.get(
   "/:id",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   requireTenantAccess,
   validateParams(organizationParamsSchema),
   organizationsController.getOrganizationByIdController,
@@ -49,7 +60,7 @@ router.get(
 
 router.patch(
   "/:id",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   requireTenantAccess,
   validateParams(organizationParamsSchema),
   validateBody(updateOrganizationSchema),
@@ -58,16 +69,17 @@ router.patch(
 
 router.post(
   "/:id/logo",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   requireTenantAccess,
   validateParams(organizationParamsSchema),
   avatarUpload.single("file"),
+  validateAndSaveAvatarUpload,
   organizationsController.uploadLogoController,
 );
 
 router.delete(
   "/:id/logo",
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   requireTenantAccess,
   validateParams(organizationParamsSchema),
   organizationsController.deleteLogoController,

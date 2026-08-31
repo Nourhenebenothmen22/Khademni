@@ -6,15 +6,16 @@ import { AppError } from "../../common/errors/app-error.js";
 import * as adminService from "./admin.service.js";
 
 /**
- * Extracts the authenticated user's organizationId from the JWT payload.
- * Returns 403 if the admin has no organization assigned.
+ * Extracts the authenticated user's organizationId.
+ * For SuperAdmins, organization context is optional unless explicitly creating a tenant-scoped resource.
+ * For Organization Admins, organization context is strictly required.
  */
 function getOrganizationId(req: AuthenticatedRequest): string {
-  const organizationId = req.user?.organizationId;
-  if (!organizationId) {
-    throw new AppError("Admin must belong to an organization", 403);
+  const orgId = req.user?.organizationId;
+  if (!orgId || req.user?.role !== "ORGANIZATION_ADMIN") {
+    throw new AppError("Organization administrator context is required.", 403);
   }
-  return organizationId;
+  return orgId;
 }
 
 export async function getDashboardStatsController(

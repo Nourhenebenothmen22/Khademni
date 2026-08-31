@@ -1,4 +1,4 @@
-import { apiRequest, API_BASE_URL } from "@/lib/api/client";
+import { apiRequest, API_BASE_URL, getAccessToken, getActiveOrganizationId } from "@/lib/api/client";
 import type {
   ApiResponse,
   Interview,
@@ -142,4 +142,38 @@ export async function submitScorecardApi(
 
 export function getIcsDownloadUrl(id: string): string {
   return `${API_BASE_URL}/interviews/${id}/calendar.ics`;
+}
+
+/**
+ * Authenticated .ics Calendar Invite download.
+ * Fetches the .ics with authorization headers and triggers browser download.
+ */
+export async function downloadIcsBlob(
+  interviewId: string,
+  filename = "interview-invitation.ics",
+): Promise<void> {
+  const url = `${API_BASE_URL}/interviews/${interviewId}/calendar.ics`;
+  const token = getAccessToken();
+  const orgId = getActiveOrganizationId();
+
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (orgId) headers["X-Organization-Id"] = orgId;
+
+  const res = await fetch(url, { headers, credentials: "include" });
+
+  if (!res.ok) {
+    throw new Error(`Calendar invite download failed: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(objectUrl);
 }

@@ -18,6 +18,8 @@ function formatDateToICS(date: Date): string {
 
 function escapeICSString(str: string): string {
   return str
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "")
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")

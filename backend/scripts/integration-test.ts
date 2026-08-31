@@ -7,6 +7,10 @@ import type { Server } from 'node:http';
 async function runIntegrationTest() {
   console.log('🚀 Starting Comprehensive Backend Integration Test Suite...');
   let server: Server | null = null;
+  let candidateUserId: string | null = null;
+  let adminUserId: string | null = null;
+  let orgId: string | null = null;
+  let jobId: string | null = null;
   const PORT = 3098;
 
   try {
@@ -43,7 +47,7 @@ async function runIntegrationTest() {
     });
     const regCandidateData = await regCandidateRes.json();
     if (!regCandidateRes.ok) throw new Error(`Candidate registration failed: ${JSON.stringify(regCandidateData)}`);
-    const candidateUserId = regCandidateData.data.id;
+    candidateUserId = regCandidateData.data.id;
     console.log('  ✅ Candidate registered.');
 
     const testOrg = await prisma.organization.create({
@@ -52,6 +56,7 @@ async function runIntegrationTest() {
         slug: `test-school-${Date.now()}`,
       },
     });
+    orgId = testOrg.id;
 
     const adminPasswordHash = await argon2.hash(password);
 
@@ -61,10 +66,12 @@ async function runIntegrationTest() {
         email: adminEmail,
         passwordHash: adminPasswordHash,
         role: 'ADMIN',
+        isSuperAdmin: true,
         organizationId: testOrg.id,
         isEmailVerified: true,
       },
     });
+    adminUserId = adminUser.id;
 
     const loginRes = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
@@ -221,7 +228,12 @@ async function runIntegrationTest() {
     // 5. Job Creation, Keywords & Matching Rules
     console.log('🔹 [Jobs] Testing Admin Job Creation, Keywords & Matching Rules...');
     const { signAccessToken } = await import('../src/lib/jwt.js');
-    const adminToken = await signAccessToken({ userId: adminUser.id, role: 'ADMIN', organizationId: testOrg.id });
+    const adminToken = await signAccessToken({
+      userId: adminUser.id,
+      role: 'ADMIN',
+      organizationId: testOrg.id,
+      isSuperAdmin: true,
+    });
 
     const createJobRes = await fetch(`${baseUrl}/jobs`, {
       method: 'POST',
@@ -237,7 +249,7 @@ async function runIntegrationTest() {
       }),
     });
     const createJobData = await createJobRes.json();
-    const jobId = createJobData.data.id;
+    jobId = createJobData.data.id;
 
     // Add keywords
     const addKeywordsRes = await fetch(`${baseUrl}/jobs/${jobId}/keywords`, {
@@ -290,7 +302,12 @@ async function runIntegrationTest() {
     console.log('🔹 [Applications] Testing Candidate Application Intake & Document File Streaming...');
     const formData = new FormData();
     formData.append('motivationLetter', 'Extremely interested in the Physics Teacher role. I hold a Master of Science in Physics and QTS certification with 6 years experience.');
-    const pdfBlob = new Blob(['(Jane Candidate Resume) (Master of Science in Physics) (6 years teaching experience) (QTS certification)'], { type: 'application/pdf' });
+    
+    // Valid PDF buffer with magic bytes %PDF-1.4 to pass file-type inspection
+    const validPdfBuffer = Buffer.from(
+      '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 120 >>\nstream\nBT /F1 12 Tf 72 712 Td (Jane Candidate Resume - Master of Science in Physics - 6 years teaching experience) Tj ET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000216 00000 n \ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n386\n%%EOF'
+    );
+    const pdfBlob = new Blob([validPdfBuffer], { type: 'application/pdf' });
     formData.append('file', pdfBlob, 'physics_resume.pdf');
 
     const applyRes = await fetch(`${baseUrl}/jobs/${jobId}/apply`, {
@@ -322,7 +339,6 @@ async function runIntegrationTest() {
       headers: {
         Authorization: `Bearer ${adminToken}`,
         'Content-Type': 'application/json',
-        'x-super-admin': 'true',
       },
       body: JSON.stringify({
         name: 'pgvector Dense Vector Teacher Matcher v3',

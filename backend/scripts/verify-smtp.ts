@@ -25,7 +25,7 @@ async function verifySmtp() {
     console.error("\n❌ SMTP Verification Error:", error.message);
     if (error.message.includes("525 5.7.1 Unauthorized IP address")) {
       console.log("\n📌 ACTION REQUIRED IN BREVO:");
-      console.log("Add your current public IP address (197.1.59.47) to Brevo -> SMTP & API -> Authorized IP addresses.");
+      console.log("Add your server's current public IP address to Brevo -> SMTP & API -> Authorized IP addresses.");
     }
   }
 }

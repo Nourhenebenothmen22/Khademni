@@ -21,7 +21,7 @@ export default function MatchingRunDetailPage({ params }: { params?: Promise<{ i
   const run = data?.data;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6 max-w-4xl">
         <Link href="/admin/matching" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600">
           <ArrowLeft className="h-4 w-4" /> Back to Matching Runs

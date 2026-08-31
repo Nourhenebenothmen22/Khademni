@@ -24,11 +24,12 @@ import {
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isOrgAdmin = user?.role === "ORGANIZATION_ADMIN";
   const [sidebarAvatarError, setSidebarAvatarError] = React.useState(false);
 
   const candidateNav = [
     { name: "Dashboard", href: "/candidate/dashboard", icon: LayoutDashboard },
+    { name: "Explore Jobs", href: "/jobs", icon: Briefcase },
     { name: "My Applications", href: "/candidate/applications", icon: FileText },
     { name: "My Interviews", href: "/candidate/interviews", icon: Calendar },
   ];
@@ -38,10 +39,9 @@ export function Sidebar() {
     { name: "Job Openings", href: "/admin/jobs", icon: Briefcase },
     { name: "Applications", href: "/admin/applications", icon: FileText },
     { name: "Interviews", href: "/admin/interviews", icon: Calendar },
-    { name: "AI Matching Run", href: "/admin/matching", icon: Cpu },
-    { name: "AI Benchmark Models", href: "/admin/ai-models", icon: ShieldCheck },
-    { name: "User Directory", href: "/admin/users", icon: Users },
-    { name: "Organizations", href: "/admin/organizations", icon: Building2 },
+    { name: "AI Matching Engine", href: "/admin/matching", icon: Cpu },
+    { name: "Organization Profile", href: "/admin/organizations", icon: Building2 },
+    { name: "Team Members", href: "/admin/users", icon: Users },
     { name: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
   ];
 
@@ -50,7 +50,7 @@ export function Sidebar() {
     { name: "Profile & Security", href: "/settings/profile", icon: Settings },
   ];
 
-  const items = isAdmin ? adminNav : candidateNav;
+  const items = isOrgAdmin ? adminNav : candidateNav;
 
   return (
     <aside className="w-64 shrink-0 border-r border-slate-200/70 bg-[#f8fafc]/80 backdrop-blur-sm min-h-[calc(100vh-4rem)] p-4 hidden md:flex flex-col justify-between">
@@ -85,7 +85,7 @@ export function Sidebar() {
         {/* Section 1 */}
         <div>
           <h2 className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            {isAdmin ? "Admin Navigation" : "Candidate Portal"}
+            {isOrgAdmin ? "Organization Workspace" : "Candidate Portal"}
           </h2>
           <nav className="mt-2.5 space-y-1">
             {items.map((item) => {

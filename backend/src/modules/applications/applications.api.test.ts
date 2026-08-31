@@ -48,7 +48,7 @@ describe("Applications API Integration Tests", () => {
         email: `admin_app_${Date.now()}@example.com`,
         passwordHash: "hash",
         fullName: "App Admin",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: orgId,
       },
     });
@@ -88,7 +88,7 @@ describe("Applications API Integration Tests", () => {
 
     adminToken = await signAccessToken({
       userId: adminUserId,
-      role: "ADMIN",
+      role: "ORGANIZATION_ADMIN",
       organizationId: orgId,
     });
 

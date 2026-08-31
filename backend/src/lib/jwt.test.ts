@@ -11,7 +11,7 @@ import {
 describe("JWT Crypto Service Unit Tests", () => {
   const mockPayload = {
     userId: "usr_abc123",
-    role: "ADMIN",
+    role: "ORGANIZATION_ADMIN",
     organizationId: "org_xyz789",
   };
 

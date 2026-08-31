@@ -85,7 +85,7 @@ export default function AIMatchingDashboardPage() {
   const runs = runsData?.data || [];
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">AI Matching Engine & Queue Control</h1>
@@ -134,6 +134,16 @@ export default function AIMatchingDashboardPage() {
               </select>
             </div>
           </div>
+
+          {selectedJobId && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3.5 flex items-start gap-3 text-xs text-blue-800">
+              <AlertTriangle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-semibold">Matching Requirements:</span> Each candidate application must include an uploaded CV document (PDF/DOCX).
+                The AI engine will parse CV text, extract pedagogical skills, and compute 384-dimensional dense semantic vector similarity against the job requirements.
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <button

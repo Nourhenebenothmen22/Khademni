@@ -2,6 +2,23 @@ import type { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "../../common/middlewares/auth.middleware.js";
 import * as authService from "./auth.service.js";
 import { env } from "../../config/env.js";
+import { COOKIE_CONFIG } from "../../config/constants.js";
+
+export async function getAvailableRolesController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const roles = authService.getAvailableRoles();
+    res.status(200).json({
+      success: true,
+      data: roles,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function registerController(
   req: AuthenticatedRequest,
@@ -69,7 +86,7 @@ export async function loginController(
         secure: env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS,
       });
     }
 
@@ -79,7 +96,7 @@ export async function loginController(
         secure: env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 15 * 60 * 1000,
+        maxAge: COOKIE_CONFIG.ACCESS_TOKEN_MAX_AGE_MS,
       });
     }
 
@@ -111,7 +128,7 @@ export async function loginMfaController(
       secure: env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS,
     });
 
     res.cookie("access_token", result.accessToken, {
@@ -119,7 +136,7 @@ export async function loginMfaController(
       secure: env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 15 * 60 * 1000,
+      maxAge: COOKIE_CONFIG.ACCESS_TOKEN_MAX_AGE_MS,
     });
 
     res.status(200).json({
@@ -162,7 +179,7 @@ export async function refreshController(
       secure: env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: COOKIE_CONFIG.REFRESH_TOKEN_MAX_AGE_MS,
     });
 
     res.cookie("access_token", result.accessToken, {
@@ -170,7 +187,7 @@ export async function refreshController(
       secure: env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 15 * 60 * 1000,
+      maxAge: COOKIE_CONFIG.ACCESS_TOKEN_MAX_AGE_MS,
     });
 
     res.status(200).json({

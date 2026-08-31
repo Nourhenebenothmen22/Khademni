@@ -10,6 +10,8 @@ import { globalErrorHandler } from "./common/middlewares/error.middleware.js";
 
 import { openApiDocument } from "./config/swagger.js";
 import { prisma } from "./lib/prisma.js";
+import { env } from "./config/env.js";
+import { API_ROUTES } from "./config/constants.js";
 
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
@@ -24,7 +26,7 @@ import { interviewsRouter } from "./modules/interviews/interviews.routes.js";
 
 const app = express();
 
-app.set("trust proxy", 1);
+app.set("trust proxy", env.TRUST_PROXY);
 
 // X-Request-ID Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -68,16 +70,16 @@ app.use(globalRateLimiter);
 app.use(verifyCsrf);
 
 // API v1 Feature Routes
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/users", usersRouter);
-app.use("/api/v1/jobs", jobsRouter);
-app.use("/api/v1/applications", applicationsRouter);
-app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/matching", matchingRouter);
-app.use("/api/v1/ai-models", aiModelsRouter);
-app.use("/api/v1/notifications", notificationsRouter);
-app.use("/api/v1/organizations", organizationsRouter);
-app.use("/api/v1/interviews", interviewsRouter);
+app.use(API_ROUTES.AUTH, authRouter);
+app.use(API_ROUTES.USERS, usersRouter);
+app.use(API_ROUTES.JOBS, jobsRouter);
+app.use(API_ROUTES.APPLICATIONS, applicationsRouter);
+app.use(API_ROUTES.ADMIN, adminRouter);
+app.use(API_ROUTES.MATCHING, matchingRouter);
+app.use(API_ROUTES.AI_MODELS, aiModelsRouter);
+app.use(API_ROUTES.NOTIFICATIONS, notificationsRouter);
+app.use(API_ROUTES.ORGANIZATIONS, organizationsRouter);
+app.use(API_ROUTES.INTERVIEWS, interviewsRouter);
 
 app.use(notFoundMiddleware);
 app.use(globalErrorHandler);

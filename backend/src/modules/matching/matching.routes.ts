@@ -9,7 +9,7 @@ import { cuidSchema } from "../../common/validators/shared.validators.js";
 
 const router = Router();
 
-router.use(authenticate, requireTenantAccess, requireRole("ADMIN"));
+router.use(authenticate, requireTenantAccess, requireRole("ORGANIZATION_ADMIN"));
 
 router.post("/run", validateBody(createMatchingRunSchema), matchingController.triggerMatchingController);
 

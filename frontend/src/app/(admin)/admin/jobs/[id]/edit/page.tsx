@@ -135,7 +135,7 @@ export default function EditJobPage({ params }: { params?: Promise<{ id: string 
   const rules = rulesRes?.data || [];
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-8 max-w-4xl">
         <Link href="/admin/jobs" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600">
           <ArrowLeft className="h-4 w-4" /> Back to Jobs Directory

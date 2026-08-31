@@ -5,7 +5,7 @@ import { logAuditAction } from "../../lib/audit.js";
 
 /**
  * Enforces tenant isolation for organization-scoped endpoints.
- * Ensures the requesting user belongs to the requested organization or has global admin clearance.
+ * Ensures the requesting ORGANIZATION_ADMIN belongs strictly to the requested organization.
  */
 export const requireTenantAccess = (
   req: AuthenticatedRequest,
@@ -16,10 +16,18 @@ export const requireTenantAccess = (
     return next(new AppError("Authentication required.", 401));
   }
 
+  if (req.user.role !== "ORGANIZATION_ADMIN") {
+    return next(new AppError("Forbidden. Organization administrator access required.", 403));
+  }
+
+  if (!req.user.organizationId) {
+    return next(new AppError("Forbidden. User is not assigned to an organization.", 403));
+  }
+
   const requestedOrgId = (
     req.params.organizationId ||
     req.params.orgId ||
-    (req.baseUrl?.includes("/organizations") ? req.params.id : undefined) ||
+    (req.baseUrl?.includes("/organizations") && req.params.id ? req.params.id : undefined) ||
     req.query.organizationId ||
     req.query.orgId ||
     req.headers["x-organization-id"] ||
@@ -29,6 +37,7 @@ export const requireTenantAccess = (
   if (requestedOrgId && req.user.organizationId !== requestedOrgId) {
     logAuditAction({
       userId: req.user.userId,
+      organizationId: req.user.organizationId,
       action: "CROSS_TENANT_ACCESS_ATTEMPT",
       entityType: "Organization",
       entityId: requestedOrgId,

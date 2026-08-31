@@ -4,6 +4,7 @@ import type { MatchingRunQuery } from "../../common/validators/matching-run.vali
 import { AppError } from "../../common/errors/app-error.js";
 import * as matchingService from "./matching.service.js";
 import * as queueService from "./matching-queue.service.js";
+import * as aiModelsService from "../ai-models/ai-models.service.js";
 
 function getOrganizationId(req: AuthenticatedRequest): string {
   const orgId = req.user?.organizationId;
@@ -19,7 +20,11 @@ export async function triggerMatchingController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const { applicationId, modelId } = req.body;
+    let { applicationId, modelId } = req.body;
+    if (!modelId) {
+      const activeModel = await aiModelsService.getActiveModel();
+      modelId = (activeModel as { id: string }).id;
+    }
     const organizationId = getOrganizationId(req);
     const run = await matchingService.runMatching(applicationId, modelId, organizationId);
     res.status(200).json({ success: true, data: run });
@@ -35,7 +40,11 @@ export async function triggerJobMatchingController(
 ): Promise<void> {
   try {
     const { jobPostId } = req.params as { jobPostId: string };
-    const { modelId } = req.body;
+    let { modelId } = req.body || {};
+    if (!modelId) {
+      const activeModel = await aiModelsService.getActiveModel();
+      modelId = (activeModel as { id: string }).id;
+    }
     const organizationId = getOrganizationId(req);
     const runs = await matchingService.runMatchingForJob(jobPostId, modelId, organizationId);
     res.status(200).json({ success: true, data: { processedCount: runs.length, runs } });

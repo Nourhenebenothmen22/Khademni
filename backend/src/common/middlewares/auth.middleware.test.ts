@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { authenticate, requireRole, requireSuperAdmin, type AuthenticatedRequest } from "./auth.middleware.js";
+import { authenticate, requireRole, type AuthenticatedRequest } from "./auth.middleware.js";
 import type { Response, NextFunction } from "express";
 import * as jwtLib from "../../lib/jwt.js";
 import { AppError } from "../errors/app-error.js";
@@ -36,7 +36,7 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
     it("should extract Bearer token and populate req.user on valid token", async () => {
       const mockPayload = {
         userId: "user-123",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN" as const,
         organizationId: "org-1",
         email: "admin@example.com",
         sessionId: "sess-1",
@@ -54,7 +54,7 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
     it("should extract token from cookies if Bearer header is omitted", async () => {
       const mockPayload = {
         userId: "user-456",
-        role: "CANDIDATE",
+        role: "CANDIDATE" as const,
         organizationId: null,
         email: "candidate@example.com",
         sessionId: "sess-2",
@@ -72,7 +72,7 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
     it("should reject token with isMfaPending=true with 401 MFA verification required", async () => {
       const mockPayload = {
         userId: "user-mfa",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN" as const,
         organizationId: "org-1",
         email: "mfa@example.com",
         sessionId: "sess-mfa",
@@ -93,7 +93,7 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
 
   describe("requireRole", () => {
     it("should reject unauthenticated request with 401", () => {
-      const middleware = requireRole("ADMIN");
+      const middleware = requireRole("ORGANIZATION_ADMIN");
       middleware(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
@@ -104,13 +104,13 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
     it("should allow request if user role matches allowed roles", () => {
       mockReq.user = {
         userId: "user-1",
-        role: "ADMIN",
+        role: "ORGANIZATION_ADMIN",
         organizationId: "org-1",
         email: "a@a.com",
         sessionId: "s-1",
       };
 
-      const middleware = requireRole("ADMIN", "SUPER_ADMIN" as unknown as "ADMIN");
+      const middleware = requireRole("ORGANIZATION_ADMIN");
       middleware(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
@@ -125,78 +125,13 @@ describe("Auth & RBAC Middleware Unit Tests", () => {
         sessionId: "s-1",
       };
 
-      const middleware = requireRole("ADMIN");
+      const middleware = requireRole("ORGANIZATION_ADMIN");
       middleware(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
       const error = getNextError(mockNext);
       expect(error.statusCode).toBe(403);
-      expect(error.message).toContain("Forbidden. Requires one of the following roles: ADMIN");
-    });
-  });
-
-  describe("requireSuperAdmin", () => {
-    it("should allow ADMIN with no organizationId (Platform Super Admin)", () => {
-      mockReq.user = {
-        userId: "super-admin-1",
-        role: "ADMIN",
-        organizationId: null,
-        email: "superadmin@platform.com",
-        sessionId: "s-sa",
-      };
-
-      requireSuperAdmin(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith();
-    });
-
-    it("should allow ADMIN with isSuperAdmin=true flag", () => {
-      mockReq.user = {
-        userId: "super-admin-2",
-        role: "ADMIN",
-        organizationId: "org-1",
-        email: "superadmin@platform.com",
-        sessionId: "s-sa2",
-        isSuperAdmin: true,
-      };
-
-      requireSuperAdmin(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith();
-    });
-
-    it("should reject regular tenant ADMIN with 403", () => {
-      mockReq.user = {
-        userId: "tenant-admin",
-        role: "ADMIN",
-        organizationId: "org-tenant-1",
-        email: "admin@school.com",
-        sessionId: "s-ta",
-        isSuperAdmin: false,
-      };
-
-      requireSuperAdmin(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
-      const error = getNextError(mockNext);
-      expect(error.statusCode).toBe(403);
-      expect(error.message).toContain("Super Admin clearance is required");
-    });
-
-    it("should reject CANDIDATE with 403", () => {
-      mockReq.user = {
-        userId: "cand-1",
-        role: "CANDIDATE",
-        organizationId: null,
-        email: "cand@test.com",
-        sessionId: "s-c",
-      };
-
-      requireSuperAdmin(mockReq as AuthenticatedRequest, mockRes as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AppError));
-      const error = getNextError(mockNext);
-      expect(error.statusCode).toBe(403);
+      expect(error.message).toContain("Forbidden. Requires one of the following roles: ORGANIZATION_ADMIN");
     });
   });
 });

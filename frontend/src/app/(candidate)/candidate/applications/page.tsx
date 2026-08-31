@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchMyApplications, withdrawApplication } from "@/features/applications/api";
+import { ApplicationStatus } from "@/types/backend";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -18,8 +19,13 @@ export default function CandidateApplicationsPage() {
   const [withdrawTargetId, setWithdrawTargetId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["myApplicationsList", page],
-    queryFn: () => fetchMyApplications({ page, limit: 10 }),
+    queryKey: ["myApplicationsList", page, filterStatus, searchQuery],
+    queryFn: () => fetchMyApplications({
+      page,
+      limit: 10,
+      status: filterStatus !== "ALL" ? (filterStatus as ApplicationStatus) : undefined,
+      search: searchQuery || undefined,
+    }),
   });
 
   const withdrawMutation = useMutation({
@@ -27,7 +33,7 @@ export default function CandidateApplicationsPage() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success("Application withdrawn successfully");
-        queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+        queryClient.invalidateQueries({ queryKey: ["myApplicationsList"] });
       } else {
         toast.error(res.message || "Could not withdraw application");
       }
@@ -36,15 +42,6 @@ export default function CandidateApplicationsPage() {
 
   const allApplications = data?.data || [];
   const pagination = data?.meta;
-
-  const filteredApplications = allApplications.filter((app) => {
-    const matchesStatus = filterStatus === "ALL" || app.status === filterStatus;
-    const matchesSearch =
-      !searchQuery ||
-      app.jobPost?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.trackingCode?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
 
   return (
     <DashboardShell requiredRole="CANDIDATE">
@@ -117,7 +114,7 @@ export default function CandidateApplicationsPage() {
           </div>
         )}
 
-        {!isLoading && !isError && filteredApplications.length === 0 && (
+        {!isLoading && !isError && allApplications.length === 0 && (
           <div className="rounded-[22px] border border-dashed border-slate-200 bg-white p-12 text-center">
             <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
             <h3 className="text-base font-bold text-slate-900">No applications found</h3>
@@ -135,9 +132,9 @@ export default function CandidateApplicationsPage() {
           </div>
         )}
 
-        {!isLoading && !isError && filteredApplications.length > 0 && (
+        {!isLoading && !isError && allApplications.length > 0 && (
           <div className="space-y-4">
-            {filteredApplications.map((app) => (
+            {allApplications.map((app) => (
               <div
                 key={app.id}
                 className="rounded-[22px] border border-slate-200/80 bg-white p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-md transition-shadow space-y-4"

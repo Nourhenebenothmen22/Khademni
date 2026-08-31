@@ -1,8 +1,9 @@
-# Sub-Agent 10 — Utilities Audit
+# Sub-Agent 10 — Utilities & Shared Infrastructure Audit Report
 
 **Target System**: Intelligent Teacher Recruitment Platform (Backend)  
 **Analysis Date**: August 2026  
-**Scope**: Shared Utilities, Helpers, Custom Error Classes, Constants, Formatting Functions, and Reusable Infrastructure Drivers.
+**Status**: Verified & Synchronized with Current Codebase  
+**Scope**: Shared Utilities, Helpers, Custom Error Classes, AES-256-GCM Encryption, Formatting Functions, and Reusable Infrastructure Drivers.
 
 ---
 
@@ -20,13 +21,14 @@ backend/src/
 └── lib/
     ├── audit.ts               # Asynchronous fire-and-forget audit logger
     ├── cache.ts               # Redis & in-memory TTL cache with fallback
-    ├── email.ts               # Nodemailer transporter & template renderer
+    ├── email.ts               # Brevo SMTP transporter & template renderer
+    ├── encryption.ts          # Authenticated AES-256-GCM column encryption
     ├── file-storage.ts        # Disk storage with path traversal validation
     ├── jwt.ts                 # Jose JWT sign & verify wrappers
     ├── logger.ts              # Pino logger configuration
     ├── password.ts            # Argon2 password hashing wrappers
     ├── prisma.ts              # Global Prisma Client instance
-    ├── redis.ts               # Centralized ioredis client singleton with fallback logging
+    ├── redis.ts               # Centralized ioredis client singleton with password auth
     ├── secrets.ts             # Cloud secret provider factory
     └── token.ts               # Token generator & SHA-256 hash helper
 ```
@@ -36,7 +38,7 @@ backend/src/
 ## 2. Utility Specifications
 
 ### 1. Custom Error Hierarchy (`app-error.ts`)
-Extends JavaScript `Error` to represent operational HTTP exceptions ([app-error.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/errors/app-error.ts)):
+Extends JavaScript `Error` to represent operational HTTP exceptions:
 
 ```typescript
 export class AppError extends Error {
@@ -58,25 +60,17 @@ export class AppError extends Error {
 }
 ```
 
-### 2. Express Async Handler (`async-handler.ts`)
-Eliminates boilerplate `try/catch` blocks inside controllers by forwarding rejected Promises to `next(error)` ([async-handler.ts](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/common/utils/async-handler.ts)):
+### 2. Authenticated AES-256-GCM Column Encryption (`encryption.ts`)
+Provides cryptographically secure encryption and decryption for sensitive database columns (MFA secrets, third-party provider API keys):
+- Uses standard 12-byte initialization vectors (`crypto.randomBytes(12)`).
+- Generates 16-byte authentication tags to ensure ciphertext integrity.
+- Encodes output as `iv:authTag:encryptedHex` strings.
 
-```typescript
-type AsyncRequestHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => Promise<unknown>;
+### 3. Express Async Handler (`async-handler.ts`)
+Eliminates boilerplate `try/catch` blocks inside controllers by forwarding rejected Promises to `next(error)`.
 
-export const asyncHandler =
-  (fn: AsyncRequestHandler) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-```
+### 4. File Storage Driver (`file-storage.ts`)
+Provides safe disk I/O operations (`saveFile`, `getFileStream`, `deleteFile`, `fileExists`) with strict path traversal validation (`resolveAndValidate()`) preventing access outside `UPLOAD_DIR`.
 
-### 3. File Storage Driver (`file-storage.ts`)
-Provides safe disk I/O operations (`saveFile`, `getFileStream`, `deleteFile`, `fileExists`). Includes strict path traversal guard (`resolveAndValidate()`) preventing access outside `UPLOAD_DIR` ([file-storage.ts:L13-L22](file:///c:/full_stack%20projects/intelligent-teacher-recruitment-platform/backend/src/lib/file-storage.ts#L13-L22)).
-
-### 4. Cryptographic Helper (`token.ts`)
+### 5. Cryptographic Helper (`token.ts`)
 Generates 32-byte cryptographically secure random hex strings (`generateRandomToken()`) and computes SHA-256 digests (`hashToken()`) for database token matching.

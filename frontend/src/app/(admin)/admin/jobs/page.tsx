@@ -8,13 +8,21 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { toast } from "sonner";
-import { Plus, Search, Edit3, Trash2, Briefcase } from "lucide-react";
+import { fetchMyOrganization } from "@/features/organizations/api";
+import { AlertCircle, Plus, Search, Edit3, Trash2, ExternalLink, Building2 } from "lucide-react";
 
 export default function AdminJobsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const { data: orgData } = useQuery({
+    queryKey: ["myOrganizationProfile"],
+    queryFn: () => fetchMyOrganization(),
+  });
+  const org = orgData?.data;
+  const isProfileIncomplete = !org?.description || !org?.location;
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["adminJobs", page, search],
@@ -37,7 +45,7 @@ export default function AdminJobsPage() {
   const pagination = data?.meta;
 
   return (
-    <DashboardShell requiredRole="ADMIN">
+    <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-6">
         <ConfirmModal
           isOpen={!!deleteTargetId}
@@ -54,10 +62,29 @@ export default function AdminJobsPage() {
           confirmText="Delete Job"
           isPending={deleteMutation.isPending}
         />
+
+        {isProfileIncomplete && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+              <div>
+                <p className="text-xs sm:text-sm font-semibold">Your Organization Profile is incomplete</p>
+                <p className="text-xs text-amber-700">Please complete mandatory profile fields (description & campus location) in Organization Settings before publishing job offers.</p>
+              </div>
+            </div>
+            <Link
+              href="/admin/organizations"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 shrink-0 shadow-2xs"
+            >
+              <Building2 className="h-3.5 w-3.5" /> Complete Profile
+            </Link>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Job Openings</h1>
-            <p className="mt-1 text-sm text-slate-600">Manage teaching positions, keywords, and AI matching rules.</p>
+            <p className="mt-1 text-sm text-slate-600">Manage teaching positions, keywords, and AI matching rules for {org?.name || "your organization"}.</p>
           </div>
           <Link
             href="/admin/jobs/new"
@@ -121,7 +148,14 @@ export default function AdminJobsPage() {
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(job.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-6 py-4 text-right space-x-3">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> View
+                      </Link>
                       <Link
                         href={`/admin/jobs/${job.id}/edit`}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline"

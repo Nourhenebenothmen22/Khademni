@@ -19,7 +19,7 @@ import {
 } from "../../common/validators/job-post.validators.js";
 import { cuidSchema } from "../../common/validators/shared.validators.js";
 import { uploadRateLimiter } from "../../common/middlewares/rate-limit.middleware.js";
-import { upload } from "../../common/middlewares/upload.middleware.js";
+import { upload, validateAndSaveUpload } from "../../common/middlewares/upload.middleware.js";
 import { applyToJobController } from "../applications/applications.controller.js";
 import * as jobsController from "./jobs.controller.js";
 import * as keywordsController from './job-keywords.controller.js';
@@ -39,10 +39,10 @@ const router = Router();
 router.post(
   "/:jobId/apply",
   authenticate,
-  requireTenantAccess,
   uploadRateLimiter,
   validateParams(z.object({ jobId: cuidSchema })),
   upload.single("file"),
+  validateAndSaveUpload,
   applyToJobController,
 );
 
@@ -64,7 +64,7 @@ router.post(
   "/",
   authenticate,
   requireTenantAccess,
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   validateBody(createJobPostSchema),
   jobsController.createJobController,
 );
@@ -73,7 +73,7 @@ router.put(
   "/:id",
   authenticate,
   requireTenantAccess,
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   validateParams(jobPostParamsSchema),
   validateBody(updateJobPostSchema),
   jobsController.updateJobController,
@@ -83,7 +83,7 @@ router.delete(
   "/:id",
   authenticate,
   requireTenantAccess,
-  requireRole("ADMIN"),
+  requireRole("ORGANIZATION_ADMIN"),
   validateParams(jobPostParamsSchema),
   jobsController.deleteJobController,
 );
@@ -95,7 +95,7 @@ router.post(
   '/:jobPostId/keywords',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   validateBody(bulkCreateJobKeywordsSchema),
   keywordsController.addKeywordsController,
 );
@@ -104,7 +104,7 @@ router.patch(
   '/:jobPostId/keywords/:id',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   validateBody(createJobKeywordSchema.partial()),
   keywordsController.updateKeywordController,
 );
@@ -113,7 +113,7 @@ router.delete(
   '/:jobPostId/keywords/:id',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   keywordsController.removeKeywordController,
 );
 
@@ -122,7 +122,7 @@ router.get(
   '/:jobPostId/rules',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   rulesController.getRulesController,
 );
 
@@ -130,7 +130,7 @@ router.post(
   '/:jobPostId/rules',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   validateBody(createJobMatchingRuleSchema),
   rulesController.addRuleController,
 );
@@ -139,7 +139,7 @@ router.put(
   '/:jobPostId/rules/:id',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   validateBody(updateJobMatchingRuleSchema),
   rulesController.updateRuleController,
 );
@@ -148,7 +148,7 @@ router.delete(
   '/:jobPostId/rules/:id',
   authenticate,
   requireTenantAccess,
-  requireRole('ADMIN'),
+  requireRole('ORGANIZATION_ADMIN'),
   rulesController.removeRuleController,
 );
 

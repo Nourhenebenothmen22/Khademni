@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { cuidSchema, paginationSchema } from "./shared.validators.js";
+import { CV_UPLOAD_CONFIG } from "../../config/constants.js";
 
 export const documentTypeEnum = z.enum(["CV", "MOTIVATION_LETTER"]);
 
@@ -11,20 +12,12 @@ export const documentStatusEnum = z.enum([
   "REJECTED",
 ]);
 
-const allowedMimeTypes = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-] as const;
-
-const allowedExtensions = [".pdf", ".doc", ".docx"] as const;
-
 export const uploadDocumentSchema = z.object({
   type: documentTypeEnum,
   originalName: z.string().min(1).max(255),
-  mimeType: z.enum(allowedMimeTypes),
-  extension: z.enum(allowedExtensions),
-  sizeBytes: z.number().int().min(1).max(5_242_880),
+  mimeType: z.enum(CV_UPLOAD_CONFIG.ALLOWED_MIME_TYPES),
+  extension: z.enum(CV_UPLOAD_CONFIG.ALLOWED_EXTENSIONS),
+  sizeBytes: z.number().int().min(1).max(CV_UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
 });
 
