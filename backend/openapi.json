@@ -885,9 +885,9 @@
             "type": "string",
             "enum": [
               "CANDIDATE",
-              "ADMIN"
+              "ORGANIZATION_ADMIN"
             ],
-            "default": "ADMIN"
+            "default": "ORGANIZATION_ADMIN"
           }
         },
         "required": [
@@ -2288,7 +2288,7 @@
             "type": "string",
             "enum": [
               "CANDIDATE",
-              "ADMIN"
+              "ORGANIZATION_ADMIN"
             ]
           },
           "isActive": {
@@ -2333,7 +2333,7 @@
         "type": "string",
         "enum": [
           "CANDIDATE",
-          "ADMIN"
+          "ORGANIZATION_ADMIN"
         ]
       },
       "verifyEmailSchema": {
