@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { realtimeEventBus } from "./event-bus.js";
 import type { RealtimeEventPayload } from "./types.js";
 

@@ -163,7 +163,6 @@ describe("Auth API Integration Test Suite", () => {
 
   let orgAdminUserId: string;
   let orgId: string;
-  let orgAdminAccessToken: string;
 
   it("POST /api/v1/auth/register — should register an ORGANIZATION_ADMIN and auto-create Organization workspace", async () => {
     const adminEmail = `orgadmin_${Date.now()}@acmeacademy.org`;
