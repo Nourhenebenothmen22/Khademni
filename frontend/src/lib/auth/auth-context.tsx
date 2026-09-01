@@ -41,11 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       if (!getAccessToken()) {
-        const csrf = await fetchCsrfToken();
-        if (!csrf) {
-          setIsLoading(false);
-          return;
-        }
+        await fetchCsrfToken();
       }
       const res = await fetchMyProfile();
       if (res.success && res.data) {
@@ -64,9 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchCsrfToken().then(() => {
-      refreshUser();
-    });
+    refreshUser();
   }, [refreshUser]);
 
   const logout = useCallback(async () => {
