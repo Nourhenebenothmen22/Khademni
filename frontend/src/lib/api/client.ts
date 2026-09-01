@@ -86,6 +86,10 @@ export async function apiRequest<T = unknown>(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
+  if (!csrfToken && options.method && options.method !== "GET") {
+    await fetchCsrfToken();
+  }
+
   if (csrfToken && options.method && options.method !== "GET") {
     headers.set("X-CSRF-Token", csrfToken);
   }
