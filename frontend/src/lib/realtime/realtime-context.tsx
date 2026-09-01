@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "../auth/auth-context";
 import { getAccessToken, API_BASE_URL } from "../api/client";
 import { tabSyncManager } from "./tab-sync";
-import type { RealtimeEventPayload, RealtimeEventType } from "./types";
+import type { RealtimeEventPayload } from "./types";
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -35,7 +35,7 @@ function getWebSocketUrl(token?: string): string {
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<RealtimeEventPayload | null>(null);
 
@@ -44,6 +44,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
+  const connectWebSocketRef = useRef<() => void>(() => {});
 
   // Invalidate TanStack Query key and sync with other tabs
   const handleQueryInvalidation = useCallback(
@@ -201,8 +202,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
           if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = setTimeout(() => {
-            if (isMountedRef.current && isAuthenticated) {
-              connectWebSocket();
+            if (isMountedRef.current) {
+              connectWebSocketRef.current();
             }
           }, delay);
         }
@@ -217,26 +218,31 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, handleRealtimeEvent]);
 
   useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+  }, [connectWebSocket]);
+
+  useEffect(() => {
     isMountedRef.current = true;
 
     if (isAuthenticated) {
-      connectWebSocket();
+      connectWebSocketRef.current();
     } else {
       if (socketRef.current) {
         socketRef.current.close();
+        socketRef.current = null;
       }
-      setIsConnected(false);
     }
 
     return () => {
       isMountedRef.current = false;
       if (socketRef.current) {
         socketRef.current.close();
+        socketRef.current = null;
       }
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
     };
-  }, [isAuthenticated, connectWebSocket]);
+  }, [isAuthenticated]);
 
   return (
     <RealtimeContext.Provider value={{ isConnected, lastEvent }}>

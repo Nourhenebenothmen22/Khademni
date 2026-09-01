@@ -7,7 +7,7 @@ import { ReactQueryProvider } from "@/lib/api/query-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Khademni ATS — Intelligent Teacher Recruitment Platform",
+  title: "Khademni — Intelligent Teacher Recruitment Platform",
   description: "Enterprise Teacher Recruitment Engine powered by Dense Vector Search and Explainable Hybrid Matching",
   robots: { index: true, follow: true },
 };

@@ -20,7 +20,8 @@ export async function triggerMatchingController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    let { applicationId, modelId } = req.body;
+    const { applicationId } = req.body;
+    let { modelId } = req.body;
     if (!modelId) {
       const activeModel = await aiModelsService.getActiveModel();
       modelId = (activeModel as { id: string }).id;
