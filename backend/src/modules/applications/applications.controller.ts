@@ -148,7 +148,7 @@ export async function withdrawApplicationController(
     const { id } = req.params as { id: string };
     const userId = req.user!.userId;
     const role = req.user!.role;
-    const organizationId = role === "ADMIN" ? (req.user?.organizationId ?? undefined) : undefined;
+    const organizationId = role === "ORGANIZATION_ADMIN" ? (req.user?.organizationId ?? undefined) : undefined;
 
     const updated = await applicationsService.withdrawApplication(
       id,

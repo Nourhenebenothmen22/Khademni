@@ -502,7 +502,7 @@ export async function getInterviewById(
   const interview = await prisma.interview.findFirst({
     where: {
       id: interviewId,
-      ...(role === "ADMIN" ? { organizationId } : {}),
+      ...(role === "ORGANIZATION_ADMIN" ? { organizationId } : {}),
       ...(role === "CANDIDATE" ? { candidateId: userId } : {}),
     },
     include: {

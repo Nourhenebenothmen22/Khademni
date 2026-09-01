@@ -395,14 +395,14 @@ export async function withdrawApplication(
   role: string,
   organizationId?: string,
 ) {
-  if (role === "ADMIN" && !organizationId) {
+  if (role === "ORGANIZATION_ADMIN" && !organizationId) {
     throw new AppError("Organization context is required for admin access.", 403);
   }
 
   const application = await prisma.application.findFirst({
     where: {
       id: applicationId,
-      ...(role === "ADMIN" ? { jobPost: { organizationId } } : {}),
+      ...(role === "ORGANIZATION_ADMIN" ? { jobPost: { organizationId } } : {}),
       ...(role === "CANDIDATE" ? { candidateId: userId } : {}),
     },
     include: {
