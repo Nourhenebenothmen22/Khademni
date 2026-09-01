@@ -65,8 +65,7 @@ async function runIntegrationTest() {
         fullName: 'Admin User',
         email: adminEmail,
         passwordHash: adminPasswordHash,
-        role: 'ADMIN',
-        isSuperAdmin: true,
+        role: 'ORGANIZATION_ADMIN',
         organizationId: testOrg.id,
         isEmailVerified: true,
       },
@@ -230,9 +229,8 @@ async function runIntegrationTest() {
     const { signAccessToken } = await import('../src/lib/jwt.js');
     const adminToken = await signAccessToken({
       userId: adminUser.id,
-      role: 'ADMIN',
+      role: 'ORGANIZATION_ADMIN',
       organizationId: testOrg.id,
-      isSuperAdmin: true,
     });
 
     const createJobRes = await fetch(`${baseUrl}/jobs`, {
