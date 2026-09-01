@@ -3,12 +3,16 @@ import { logger } from "./lib/logger.js";
 import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
 import { SECURITY_CONFIG } from "./config/constants.js";
+import { initWebSocketServer } from "./lib/realtime/websocket-server.js";
 
 const PORT = env.PORT;
 
 const server = app.listen(PORT, () => {
   logger.info(`Server listening on port ${PORT} in ${env.NODE_ENV} mode`);
 });
+
+// Initialize Realtime WebSocket Server
+initWebSocketServer(server);
 
 // Graceful Shutdown Handler
 async function gracefulShutdown(signal: string): Promise<void> {
