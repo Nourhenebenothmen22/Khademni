@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../common/errors/app-error.js';
 import { logger } from '../../lib/logger.js';
 import { PAGINATION_CONFIG } from '../../config/constants.js';
+import { realtimeEventBus } from '../../lib/realtime/event-bus.js';
 import type { NotificationQuery } from '../../common/validators/notification.validators.js';
 
 interface CreateNotificationInput {
@@ -14,12 +15,22 @@ interface CreateNotificationInput {
 
 export async function createNotification(input: CreateNotificationInput) {
   try {
-    return await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         ...input,
         metadata: input.metadata ? (input.metadata as unknown as object) : undefined,
       },
     });
+
+    if (notification) {
+      realtimeEventBus.emitEvent({
+        type: "NOTIFICATION_CREATED",
+        data: notification,
+        userId: notification.userId,
+      });
+    }
+
+    return notification;
   } catch (error) {
     logger.error({ error, userId: input.userId }, 'Failed to create notification');
     return null;
@@ -64,10 +75,18 @@ export async function markAsRead(notificationId: string, userId: string) {
   });
   if (!notification) throw new AppError('Notification not found.', 404);
 
-  return prisma.notification.update({
+  const updated = await prisma.notification.update({
     where: { id: notificationId },
     data: { isRead: true },
   });
+
+  realtimeEventBus.emitEvent({
+    type: "NOTIFICATION_READ",
+    data: { id: notificationId, isRead: true },
+    userId,
+  });
+
+  return updated;
 }
 
 export async function markAllAsRead(userId: string) {
@@ -75,6 +94,13 @@ export async function markAllAsRead(userId: string) {
     where: { userId, isRead: false },
     data: { isRead: true },
   });
+
+  realtimeEventBus.emitEvent({
+    type: "NOTIFICATIONS_READ_ALL",
+    data: { count: result.count },
+    userId,
+  });
+
   return { updated: result.count };
 }
 

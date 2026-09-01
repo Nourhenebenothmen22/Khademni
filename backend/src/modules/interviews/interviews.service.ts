@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { createNotification } from "../notifications/notifications.service.js";
+import { realtimeEventBus } from "../../lib/realtime/event-bus.js";
 import {
   sendInterviewInvitationEmail,
   sendInterviewRescheduledEmail,
@@ -216,6 +217,22 @@ export async function scheduleInterview(
     entityType: "Interview",
     entityId: interview.id,
     metadata: { applicationId: input.applicationId, type: input.type, startTime, endTime },
+  });
+
+  realtimeEventBus.emitEvent({
+    type: "INTERVIEW_SCHEDULED",
+    data: {
+      interviewId: interview.id,
+      applicationId: input.applicationId,
+      type: input.type,
+      startTime,
+      endTime,
+      meetingUrl: meetingResult.meetingUrl,
+      candidateId: application.candidate.id,
+      jobTitle: application.jobPost.title,
+    },
+    userId: application.candidate.id,
+    organizationId,
   });
 
   return interview;
@@ -488,6 +505,17 @@ export async function submitScorecard(
     entityType: "InterviewScorecard",
     entityId: scorecard!.id,
     metadata: { interviewId, recommendation: input.recommendation },
+  });
+
+  realtimeEventBus.emitEvent({
+    type: "SCORECARD_SUBMITTED",
+    data: {
+      interviewId,
+      scorecardId: scorecard!.id,
+      recommendation: input.recommendation,
+      interviewerId,
+    },
+    organizationId,
   });
 
   return scorecard!;

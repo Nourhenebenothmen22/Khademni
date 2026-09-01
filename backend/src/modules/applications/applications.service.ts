@@ -7,6 +7,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { saveFile, getFileStream, deleteFile } from "../../lib/file-storage.js";
 import { sendApplicationStatusEmail } from "../../lib/email.js";
 import { createNotification } from "../notifications/notifications.service.js";
+import { realtimeEventBus } from "../../lib/realtime/event-bus.js";
 import { logAuditAction } from "../../lib/audit.js";
 import { isValidTransition } from "./status-machine.js";
 import { PAGINATION_CONFIG } from "../../config/constants.js";
@@ -116,6 +117,21 @@ export async function applyToJob(
       entityId: application!.id,
       metadata: { trackingCode, jobPostId },
     });
+
+    if (jobPost.organizationId) {
+      realtimeEventBus.emitEvent({
+        type: "APPLICATION_CREATED",
+        data: {
+          id: application!.id,
+          trackingCode: application!.trackingCode,
+          status: application!.status,
+          candidateId,
+          jobPostId,
+          jobTitle: jobPost.title,
+        },
+        organizationId: jobPost.organizationId,
+      });
+    }
 
     return application!;
 
@@ -265,6 +281,21 @@ export async function updateApplicationStatus(
     entityType: "Application",
     entityId: applicationId,
     metadata: { oldStatus, newStatus, reason: input.reason },
+  });
+
+  realtimeEventBus.emitEvent({
+    type: "APPLICATION_STATUS_UPDATED",
+    data: {
+      applicationId: updatedApplication.id,
+      trackingCode: updatedApplication.trackingCode,
+      status: updatedApplication.status,
+      oldStatus,
+      candidateId: updatedApplication.candidate.id,
+      jobPostId: updatedApplication.jobPost.id,
+      jobTitle: updatedApplication.jobPost.title,
+    },
+    userId: updatedApplication.candidate.id,
+    organizationId: updatedApplication.jobPost.organizationId,
   });
 
   return updatedApplication;

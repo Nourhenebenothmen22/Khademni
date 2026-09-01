@@ -5,6 +5,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { logger } from "../../lib/logger.js";
 import { redisClient, getBullMqRedisOptions } from "../../lib/redis.js";
 import { env } from "../../config/env.js";
+import { realtimeEventBus } from "../../lib/realtime/event-bus.js";
 import { runMatching } from "./matching.service.js";
 
 export type MatchingJobStatusType = "pending" | "processing" | "completed" | "failed";
@@ -71,6 +72,14 @@ async function saveJobState(state: MatchingJobState): Promise<void> {
       const message = err instanceof Error ? err.message : "Unknown error";
       logger.warn({ err: message, queueJobId: state.queueJobId }, "Failed to persist job state to Redis.");
     }
+  }
+
+  if (state.organizationId) {
+    realtimeEventBus.emitEvent({
+      type: state.status === "completed" ? "MATCHING_RUN_COMPLETED" : "MATCHING_PROGRESS_UPDATED",
+      data: state,
+      organizationId: state.organizationId,
+    });
   }
 }
 
