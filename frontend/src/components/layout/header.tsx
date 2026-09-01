@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getAvatarImageUrl } from "@/lib/api/client";
 import { fetchUnreadNotificationCount } from "@/features/notifications/api";
@@ -10,7 +11,6 @@ import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkle
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -18,6 +18,17 @@ export function Header() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const { data: unreadData } = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: async () => {
+      const res = await fetchUnreadNotificationCount();
+      return res.success && res.data ? res.data.unreadCount : 0;
+    },
+    enabled: !!isAuthenticated,
+  });
+
+  const unreadCount = unreadData ?? 0;
 
   const isOrgAdmin = user?.role === "ORGANIZATION_ADMIN";
 
@@ -40,16 +51,6 @@ export function Header() {
   ];
 
   const navItems = isOrgAdmin ? adminNav : candidateNav;
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadNotificationCount().then((res) => {
-        if (res.success && res.data) {
-          setUnreadCount(res.data.unreadCount);
-        }
-      });
-    }
-  }, [isAuthenticated]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
