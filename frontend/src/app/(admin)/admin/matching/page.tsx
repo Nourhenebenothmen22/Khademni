@@ -87,11 +87,20 @@ export default function AIMatchingDashboardPage() {
   return (
     <DashboardShell requiredRole="ORGANIZATION_ADMIN">
       <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">AI Matching Engine & Queue Control</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Execute hybrid dense vector (384d) + BM25 sparse matching runs on candidate CVs.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">AI Matching Engine & Queue Control</h1>
+            <p className="mt-1 text-sm text-slate-600">
+              Execute hybrid dense vector (384d) + BM25 sparse matching runs on candidate CVs.
+            </p>
+          </div>
+          <Link
+            href="/admin/ai-models"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs self-start"
+          >
+            <Cpu className="h-4 w-4 text-[#282276]" />
+            <span>AI Models Registry</span>
+          </Link>
         </div>
 
         {/* Execution Control Card */}
