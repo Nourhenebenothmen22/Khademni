@@ -24,7 +24,7 @@ Khademni ATS is an intelligent teacher recruitment SaaS platform designed to str
 
 - **100% Real API Mapping**: Every UI view, table, and form connects directly to a live backend endpoint.
 - **Multi-Tenant Scoping**: All admin requests automatically propagate tenant context (`X-Organization-Id`) and authenticate via HTTP-only JWTs.
-- **Strict Role Enforcement**: Route guards distinguish between `CANDIDATE`, `ADMIN` (Tenant Admin / Recruiter), and `isSuperAdmin` (Platform Super Admin).
+- **Strict Role Enforcement**: Route guards strictly enforce role-based access between `CANDIDATE` and `ORGANIZATION_ADMIN`.
 
 ---
 

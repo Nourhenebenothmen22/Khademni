@@ -24,7 +24,7 @@ Production-ready, scalable, and secure RESTful backend service for the **Intelli
 
 The **Intelligent Teacher Recruitment Platform Backend** provides a complete multi-tenant recruitment operating system for schools, universities, and educational institutions:
 
-- **Identity & Role-Based Access Control**: Strict multi-tenant RBAC (`ADMIN`, `CANDIDATE`) and Super Admin clearance (`isSuperAdmin: true`), Argon2 password hashing, atomic JWT refresh rotation with breach defense, and TOTP 2FA (`otplib`).
+- **Identity & Role-Based Access Control**: Strict multi-tenant RBAC (`ORGANIZATION_ADMIN`, `CANDIDATE`), Argon2 password hashing, atomic JWT refresh rotation with breach defense, and TOTP 2FA (`otplib`).
 - **Multi-Tenant Scoping**: `requireTenantAccess` middleware, tenant query filtering, composite multi-tenant database indexes, and dedicated `CandidateHybridIndex` tenant partitioning.
 - **Candidate CV Ingestion Pipeline**: In-memory binary magic-byte inspection (`file-type`), path-traversal disk storage security, SHA-256 deduplication, text extraction via `pdf-parse`, and automatic 384-dimensional dense vector embedding generation.
 - **Explainable Hybrid AI Matching Engine**: Multi-tiered scoring engine combining dense semantic vector cosine distance (`pgvector`), sparse lexical search (`tsvector`), Reciprocal Rank Fusion (RRF), rule-based qualification screening (degree hierarchy regex, date-merged experience years), and Cross-Attention reranking.
@@ -168,7 +168,7 @@ All verified vulnerabilities have been remediated:
 
 | Area | Security Implementation |
 |---|---|
-| **Super Admin RBAC** | Gated strictly by `req.user.isSuperAdmin === true` (database column + JWT claim). `X-Super-Admin` header spoofing removed. |
+| **Multi-Tenant RBAC** | Strict role enforcement (`ORGANIZATION_ADMIN`, `CANDIDATE`) with `requireTenantAccess` organization isolation. |
 | **SQL Injection Prevention** | All raw SQL statements use parameterized `prisma.$executeRaw(Prisma.sql\`...\`)`. Unsafe SQL string concatenation eliminated. |
 | **File Upload Security** | In-memory binary magic-byte detection via `file-type` on uploaded buffers before disk writes. Client `Content-Type` headers discarded. |
 | **JWT Session Integrity** | `refreshSession` re-queries the database inside an atomic transaction, validating `isActive === true` and minting tokens with live database roles. |
@@ -182,7 +182,7 @@ All verified vulnerabilities have been remediated:
 ## Database Models (23 Prisma Models)
 
 1. `Organization` — Tenant institution profile
-2. `User` — User accounts (`ADMIN`, `CANDIDATE`), `isSuperAdmin`, MFA secret
+2. `User` — User accounts (`ORGANIZATION_ADMIN`, `CANDIDATE`), MFA secret
 3. `AuthSession` — Active refresh token sessions with rotation tracking
 4. `JobPost` — Job postings, status lifecycle, `vector(384)` embedding
 5. `JobKeyword` — Weighted keywords (`REQUIRED`, `OPTIONAL`, `BONUS`)

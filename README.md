@@ -76,9 +76,7 @@ graph LR
 
 | Role | Access Level | Capabilities | Primary Route |
 |---|---|---|---|
-| **Platform Super Admin** | `role: ADMIN`<br>`isSuperAdmin: true` | Manages global AI models, algorithm tuning, hyperparameters, system-wide evaluations/metrics, and cross-tenant organization directory. | `/admin/ai-models`<br>`/admin/dashboard` |
-| **Organization Admin** | `role: ADMIN`<br>`organizationId: "<org_id>"` | Manages institution profile, publishes jobs, configures matching rules & keywords, reviews applications, triggers AI matching, schedules interviews, and manages team members. | `/admin/dashboard`<br>`/admin/jobs`<br>`/org/me` |
-| **Recruiter / Interviewer** | `role: ADMIN`<br>`organizationId: "<org_id>"` | Conducts assigned interviews, accesses meeting links (Zoom/Meet/Teams), and submits multi-criteria scorecards (`ScorecardCriteriaScore`). | `/admin/interviews` |
+| **Organization Administrator** | `role: ORGANIZATION_ADMIN`<br>`organizationId: "<org_id>"` | Manages institution profile, publishes jobs, configures matching rules & keywords, reviews applications, triggers AI matching, schedules interviews, evaluates scorecards, and manages team members. | `/admin/dashboard`<br>`/admin/jobs`<br>`/org/me` |
 | **Candidate** | `role: CANDIDATE`<br>`organizationId: null` | Discovers published job posts, submits applications with CV uploads, tracks progress with tracking codes (`APP-XXXXXXXX`), manages scheduled interviews, and downloads `.ics` calendars. | `/jobs`<br>`/candidate/dashboard` |
 
 ---
