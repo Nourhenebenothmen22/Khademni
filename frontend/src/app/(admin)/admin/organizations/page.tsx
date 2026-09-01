@@ -62,33 +62,33 @@ export default function AdminOrganizationsPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [prevOrgId, setPrevOrgId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (org) {
-      setFormData({
-        name: org.name || "",
-        slug: org.slug || "",
-        domain: org.domain || "",
-        website: org.website || "",
-        description: org.description || "",
-        industry: org.industry || "Higher Education",
-        location: org.location || "",
-        address: org.address || "",
-        phone: org.phone || "",
-        email: org.email || "",
-        country: org.country || "Tunisia",
-        city: org.city || "Tunis",
-        socialLinks: (org.socialLinks as Record<string, string>) || {
-          linkedin: "",
-          twitter: "",
-          facebook: "",
-        },
-      });
-      if (org.logoUrl) {
-        setLogoPreview(getOrgLogoImageUrl(org.logoUrl));
-      }
+  if (org && org.id !== prevOrgId) {
+    setPrevOrgId(org.id);
+    setFormData({
+      name: org.name || "",
+      slug: org.slug || "",
+      domain: org.domain || "",
+      website: org.website || "",
+      description: org.description || "",
+      industry: org.industry || "Higher Education",
+      location: org.location || "",
+      address: org.address || "",
+      phone: org.phone || "",
+      email: org.email || "",
+      country: org.country || "Tunisia",
+      city: org.city || "Tunis",
+      socialLinks: (org.socialLinks as Record<string, string>) || {
+        linkedin: "",
+        twitter: "",
+        facebook: "",
+      },
+    });
+    if (org.logoUrl) {
+      setLogoPreview(getOrgLogoImageUrl(org.logoUrl));
     }
-  }, [org]);
+  }
 
   // Profile completion calculation
   const mandatoryFields = [
