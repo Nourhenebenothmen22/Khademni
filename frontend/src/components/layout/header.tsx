@@ -9,10 +9,15 @@ import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkle
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isOrgAdmin = user?.role === "ORGANIZATION_ADMIN";
 
@@ -50,7 +55,7 @@ export function Header() {
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 md:gap-8">
-          {isAuthenticated && (
+          {mounted && isAuthenticated && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
@@ -82,7 +87,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          {isAuthenticated ? (
+          {mounted && isAuthenticated ? (
             <>
               <Link
                 href="/notifications"
@@ -189,7 +194,7 @@ export function Header() {
       </div>
 
       {/* Mobile Menu Drawer */}
-      {mobileMenuOpen && isAuthenticated && (
+      {mobileMenuOpen && mounted && isAuthenticated && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top duration-200">
           <div className="space-y-1">
             <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
