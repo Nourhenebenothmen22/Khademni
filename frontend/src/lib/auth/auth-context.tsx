@@ -60,8 +60,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
+    let isSubscribed = true;
+
+    const initializeAuth = async () => {
+      try {
+        if (!getAccessToken()) {
+          await fetchCsrfToken();
+        }
+        const res = await fetchMyProfile();
+        if (isSubscribed) {
+          if (res.success && res.data) {
+            setActiveOrganizationId(res.data.organizationId || null);
+            setUser(res.data);
+          } else {
+            setActiveOrganizationId(null);
+            setUser(null);
+          }
+        }
+      } catch {
+        if (isSubscribed) {
+          setActiveOrganizationId(null);
+          setUser(null);
+        }
+      } finally {
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const logout = useCallback(async () => {
     try {

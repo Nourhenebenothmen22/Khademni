@@ -1,23 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getAvatarImageUrl } from "@/lib/api/client";
 import { fetchUnreadNotificationCount } from "@/features/notifications/api";
-import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles, Menu, X, LayoutDashboard, FileText, Briefcase, Cpu, Users, ShieldCheck, ShieldAlert, Settings, Calendar } from "lucide-react";
+import { Bell, LogOut, User as UserIcon, Shield, Building2, ChevronDown, Sparkles, Menu, X, LayoutDashboard, FileText, Briefcase, Cpu, Users, ShieldAlert, Settings, Calendar } from "lucide-react";
+
+const emptySubscribe = () => () => {};
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const { data: unreadData } = useQuery({
     queryKey: ["notifications", "unread-count"],
