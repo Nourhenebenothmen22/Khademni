@@ -114,7 +114,7 @@ describe("Users & Admin User Directory API Integration Tests", () => {
     expect(res.body.data.fullName).toBe("Updated Profile Name");
   });
 
-  it("GET /api/v1/admin/users — should list tenant users for ADMIN", async () => {
+  it("GET /api/v1/admin/users — should list tenant users for ORGANIZATION_ADMIN", async () => {
     const res = await request(app)
       .get("/api/v1/admin/users")
       .set("Origin", "http://localhost:3001")

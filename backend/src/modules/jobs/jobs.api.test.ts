@@ -81,7 +81,7 @@ describe("Jobs & Matching Rules API Integration Tests", () => {
     if (orgId) await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
   }, 45000);
 
-  it("POST /api/v1/jobs — should allow ADMIN to create a job opening", async () => {
+  it("POST /api/v1/jobs — should allow ORGANIZATION_ADMIN to create a job opening", async () => {
     const res = await request(app)
       .post("/api/v1/jobs")
       .set("Origin", "http://localhost:3001")
@@ -102,7 +102,7 @@ describe("Jobs & Matching Rules API Integration Tests", () => {
     createdJobId = res.body.data.id;
   }, 30000);
 
-  it("GET /api/v1/jobs — should list jobs for ADMIN scoped to organization", async () => {
+  it("GET /api/v1/jobs — should list jobs for ORGANIZATION_ADMIN scoped to organization", async () => {
     expect(createdJobId).toBeDefined();
     const res = await request(app)
       .get("/api/v1/jobs?page=1&limit=10")

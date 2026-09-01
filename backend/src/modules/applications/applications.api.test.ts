@@ -109,7 +109,7 @@ describe("Applications API Integration Tests", () => {
     if (orgId) await prisma.organization.delete({ where: { id: orgId } }).catch(() => {});
   }, 45000);
 
-  it("GET /api/v1/applications — should return paginated list for ADMIN", async () => {
+  it("GET /api/v1/applications — should return paginated list for ORGANIZATION_ADMIN", async () => {
     const res = await request(app)
       .get("/api/v1/applications")
       .set("Origin", "http://localhost:3001")
